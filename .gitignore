@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Databases & models (generated artifacts)
+*.db
+*.sqlite3
+model.pkl
+
+# Node
+node_modules/
+dist/
+.vite/
+
+# Env & IDE
+.env
+.env.local
+.vscode/
+.idea/
