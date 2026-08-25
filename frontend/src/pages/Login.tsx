@@ -81,8 +81,8 @@ export default function Login() {
             <div className="mt-6 space-y-4">
               {!otpStep && (
                 <motion.div variants={item}>
-                  <FormField label="Personnel / Officer ID" value={loginId}
-                             onChange={(v) => setLoginId(v)} placeholder="e.g. CPF-1001"
+                  <FormField label="Personnel ID or Email" value={loginId}
+                             onChange={(v) => setLoginId(v)} placeholder="e.g. CPF-1001 or you@example.com"
                              autoComplete="username" required minLength={3} icon={User} />
                 </motion.div>
               )}

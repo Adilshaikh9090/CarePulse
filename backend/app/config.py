@@ -16,7 +16,10 @@ FORCE_RETRAIN = os.getenv("CAREPULSE_FORCE_RETRAIN", "0") == "1"
 DEMO_PASSWORD = os.getenv("CAREPULSE_DEMO_PASSWORD", "demo1234")
 
 API_PREFIX = "/api"
-CORS_ORIGINS = os.getenv("CAREPULSE_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+CORS_ORIGINS = os.getenv(
+    "CAREPULSE_CORS",
+    "http://localhost:5173,http://127.0.0.1:5173,https://carepulse-app.netlify.app"
+).split(",")
 APP_NAME = "PersonnelAI — Predictive Welfare & Stress Monitoring (Prototype)"
 DISCLAIMER = (
     "AI-generated welfare indicators are intended to support early intervention and should not be "

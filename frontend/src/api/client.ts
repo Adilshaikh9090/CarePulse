@@ -1,3 +1,4 @@
+const API_BASE = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL || ''
 const TOKEN_KEY = 'carepulse_token'
 const USER_KEY = 'carepulse_user'
 
@@ -34,7 +35,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (token) headers.Authorization = `Bearer ${token}`
   let res: Response
   try {
-    res = await fetch(`/api${path}`, {
+    res = await fetch(`${API_BASE}/api${path}`, {
       method, headers, body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {

@@ -18,10 +18,13 @@ DEMO_OTP = "123456"
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.personnel_id == payload.login_id.strip().upper()).first()
+    login_id = payload.login_id.strip()
+    user = db.query(User).filter(User.personnel_id == login_id.upper()).first()
+    if not user and '@' in login_id:
+        user = db.query(User).filter(User.email == login_id.lower()).first()
     if not user or not verify_password(payload.password, user.salt, user.password_hash):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED,
-                            "Invalid credentials. Please check your Personnel ID and password.")
+                            "Invalid credentials. Please check your ID/email and password.")
     if not user.active:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "This account has been deactivated.")
     if user.twofa_enabled and (payload.otp or "").strip() != DEMO_OTP:
@@ -36,7 +39,10 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.post("/forgot-password")
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """Demo flow: returns the reset token directly (no email service in prototype)."""
-    user = db.query(User).filter(User.personnel_id == payload.login_id.strip().upper()).first()
+    login_id = payload.login_id.strip()
+    user = db.query(User).filter(User.personnel_id == login_id.upper()).first()
+    if not user and '@' in login_id:
+        user = db.query(User).filter(User.email == login_id.lower()).first()
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No account found with that Personnel ID.")
     token = secrets.token_urlsafe(24)

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: carepulse-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CAREPULSE_CORS
+        sync: false
+        value: "https://carepulse-app.netlify.app,http://localhost:5173"
+      - key: CAREPULSE_DATABASE_URL
+        sync: false
+        value: "sqlite:///./carepulse.db"

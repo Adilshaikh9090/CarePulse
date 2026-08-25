@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
-  ArrowRight, BadgeCheck, Check, Copy, IdCard, Lock, Mail,
+  ArrowRight, Check, Copy, IdCard, Lock, Mail,
   Phone, ShieldCheck, User,
 } from 'lucide-react'
 import { ErrorBanner, FormField, FormGrid, GradientButton, PasswordField } from '../components/form'
-import UnitDropdown from '../components/UnitDropdown'
 import AuthLayout from '../components/layout/AuthLayout'
 import { useAuth } from '../context/AuthContext'
 import * as api from '../services'
@@ -15,20 +14,18 @@ type Values = {
   full_name: string
   email: string
   phone: string
-  unit_id: string
-  designation: string
   password: string
   confirm: string
 }
 
 const EMPTY: Values = {
-  full_name: '', email: '', phone: '', unit_id: '',
-  designation: '', password: '', confirm: '',
+  full_name: '', email: '', phone: '',
+  password: '', confirm: '',
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const FIELDS: (keyof Values)[] =
-  ['full_name', 'email', 'phone', 'unit_id', 'designation', 'password', 'confirm']
+  ['full_name', 'email', 'phone', 'password', 'confirm']
 
 function validate(field: keyof Values, v: Values): string | undefined {
   switch (field) {
@@ -46,9 +43,6 @@ function validate(field: keyof Values, v: Values): string | undefined {
       if (digits.length > 0 && digits.length < 7) return 'Enter a valid phone number'
       return undefined
     }
-    case 'unit_id':
-      if (!v.unit_id) return 'Select your duty unit'
-      return undefined
     case 'password':
       if (v.password.length < 8) return 'Password must be at least 8 characters'
       return undefined
@@ -74,7 +68,6 @@ export default function Register() {
   const { signIn } = useAuth()
   const navigate = useNavigate()
 
-  const [units, setUnits] = useState<{ id: number; name: string }[]>([])
   const [values, setValues] = useState<Values>(EMPTY)
   const [touched, setTouched] = useState<Partial<Record<keyof Values, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -82,14 +75,8 @@ export default function Register() {
   const [banner, setBanner] = useState<string | null>(null)
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [createdPassword, setCreatedPassword] = useState('')
+  const [createdEmail, setCreatedEmail] = useState('')
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    api.fetchUnits().then((d) => {
-      setUnits(d.items)
-      if (d.items.length) setValues((f) => ({ ...f, unit_id: String(d.items[0].id) }))
-    }).catch(() => undefined)
-  }, [])
 
   const errorFor = (field: keyof Values): string | undefined =>
     touched[field] || submitted ? validate(field, values) : undefined
@@ -126,12 +113,11 @@ export default function Register() {
         full_name: values.full_name.trim(),
         email: values.email.trim(),
         phone: values.phone.trim() || undefined,
-        designation: values.designation.trim() || undefined,
-        unit_id: values.unit_id ? Number(values.unit_id) : null,
         password: values.password,
       })
       setCreatedId(data.user.personnel_id)
       setCreatedPassword(values.password)
+      setCreatedEmail(values.email.trim())
       setValues(EMPTY)
       setTouched({})
       setSubmitted(false)
@@ -197,7 +183,7 @@ export default function Register() {
           </motion.h1>
           <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }}
                     className="mx-auto mt-2 max-w-xs text-xs leading-relaxed text-slate-400">
-            Welcome aboard. Save your unique Personnel ID now — you&apos;ll need it for every future sign-in.
+            Use your email and password to sign in below.
           </motion.p>
 
           <motion.div
@@ -207,36 +193,46 @@ export default function Register() {
             className="mt-7 rounded-2xl bg-navy-700/70 px-5 py-5 ring-1 ring-line"
           >
             <p className="flex items-center justify-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-              <IdCard size={12} /> Your Personnel ID
+              <IdCard size={12} /> Your Login Credentials
             </p>
-            <div className="mt-3 flex items-center justify-center gap-3">
-              <code className="text-[26px] font-bold leading-none tracking-[0.12em] text-sky-300">
-                {createdId}
-              </code>
-              <button
-                type="button"
-                onClick={copyId}
-                aria-label={copied ? 'Copied' : 'Copy Personnel ID'}
-                title={copied ? 'Copied!' : 'Copy'}
-                className="rounded-lg p-2 text-slate-400 ring-1 ring-line transition-all hover:bg-hoverc hover:text-sky-300"
-              >
-                {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-              </button>
+            <div className="mt-3 space-y-2 text-left">
+              <div className="flex items-center justify-between rounded-lg bg-subtle px-3 py-2">
+                <span className="text-[11px] text-slate-400">Personnel ID</span>
+                <div className="flex items-center gap-2">
+                  <code className="text-sm font-bold text-sky-300">{createdId}</code>
+                  <button type="button" onClick={copyId}
+                    className="rounded p-1 text-slate-400 hover:text-sky-300"
+                    title={copied ? 'Copied!' : 'Copy'}>
+                    {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-subtle px-3 py-2">
+                <span className="text-[11px] text-slate-400">Email</span>
+                <code className="text-sm font-medium text-slate-200">{createdEmail}</code>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-subtle px-3 py-2">
+                <span className="text-[11px] text-slate-400">Password</span>
+                <code className="text-sm font-medium text-slate-200">{'•'.repeat(createdPassword.length || 8)}</code>
+              </div>
             </div>
             {copied && (
-              <p className="mt-2 text-[10px] font-medium uppercase tracking-widest text-emerald-300">
+              <p className="mt-2 text-center text-[10px] font-medium uppercase tracking-widest text-emerald-300">
                 Copied to clipboard
               </p>
             )}
           </motion.div>
 
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.95 }}>
+                      transition={{ delay: 0.95 }} className="mt-4 space-y-2">
             <GradientButton type="button" loading={loading} onClick={continueToDashboard}>
               Continue to Dashboard
               <ArrowRight size={16}
                           className="transition-transform duration-300 group-hover:translate-x-1" />
             </GradientButton>
+            <p className="text-center text-[11px] text-slate-500">
+              Or <Link to="/login" className="text-sky-300 hover:text-sky-200 font-medium">go to login</Link>
+            </p>
           </motion.div>
         </div>
       </AuthLayout>
@@ -276,20 +272,8 @@ export default function Register() {
               <motion.div variants={item}>
                 <FormField label="Phone (optional)" type="tel" value={values.phone}
                            onChange={setField('phone')} onBlur={blurField('phone')}
-                           placeholder="+91 …" autoComplete="tel" icon={Phone}
+                           placeholder="+91 ..." autoComplete="tel" icon={Phone}
                            error={errorFor('phone')} />
-              </motion.div>
-              <motion.div variants={item}>
-                <UnitDropdown label="Duty unit" value={values.unit_id}
-                              onChange={setField('unit_id')} error={errorFor('unit_id')}
-                              options={[{ value: '', label: 'Select unit…' },
-                                        ...units.map((u) => ({ value: String(u.id), label: u.name }))]}
-                              disabled={loading} />
-              </motion.div>
-              <motion.div variants={item}>
-                <FormField label="Designation (optional)" value={values.designation}
-                           onChange={setField('designation')} placeholder="e.g. Patrol Officer"
-                           icon={BadgeCheck} />
               </motion.div>
               <motion.div variants={item}>
                 <PasswordField label="Password" value={values.password} onChange={setField('password')}
