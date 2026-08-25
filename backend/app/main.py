@@ -82,4 +82,4 @@ app.add_middleware(CORSMiddleware, allow_origins=CORS_ORIGINS,
 
 for r in (general.router, auth.router, personnel.router, ai.router, welfare.router,
           analytics.router, privacy.router, admin.router):
-    app.include_router(r)
+    app.include_router(r, prefix="/api")
