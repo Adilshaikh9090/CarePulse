@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
 
 from ..config import FORCE_RETRAIN, MODEL_PATH
+from ..services.scoring import compute_sub_scores, resolve_level
 from .features import FACTOR_LABELS, FEATURE_NAMES, NEUTRAL, synthetic_training_set, vectorize
 
 
@@ -53,26 +54,24 @@ class WelfareRiskEngine:
         p_low, p_mod, p_high = float(p[0]), float(p[1]), float(p[2])
 
         risk_score = round(p_mod + p_high, 4)
-        if p_high >= 0.40 or risk_score >= 0.70:
-            level = "High"
-        elif risk_score >= 0.34:
-            level = "Moderate"
-        else:
-            level = "Low"
+        level = resolve_level(risk_score, p_high)
 
         confidence = round(0.60 + 0.37 * max(p_low, p_mod, p_high), 3)
         factors = self._explain_one(x)
+        sub_scores = compute_sub_scores(p_low, p_mod, p_high, factors)
         return {
             "risk_level": level,
             "risk_score": risk_score,
             "confidence": confidence,
+            "probs": [round(p_low, 4), round(p_mod, 4), round(p_high, 4)],
+            "sub_scores": sub_scores,
             "model_version": "rf-prototype-1.0",
             "top_factors": factors[:3],
             "all_factors": factors,
             "explanation": self._narrative(level, factors),
             "recommendations": self._recommendations(level, factors),
-            "disclaimer": ("This prediction is an AI-generated welfare indicator and is not a medical "
-                           "diagnosis. Human review by authorized welfare personnel is required before any action."),
+            "disclaimer": ("AI-generated wellness indicator — not a medical diagnosis. "
+                           "Human welfare review is required before any intervention."),
         }
 
     def _explain_one(self, x: np.ndarray) -> list[dict]:
@@ -107,8 +106,12 @@ class WelfareRiskEngine:
         text = f"The current welfare-risk indicator is primarily associated with elevated {names}. "
         if supportive:
             text += f"{supportive[0]['name']} remains a supportive factor at this time. "
-        if level == "High":
-            text += "Several indicators have risen together, suggesting a timely need for supportive human review."
+        if level in ("High", "Critical"):
+            text += ("Several indicators have risen together, suggesting a timely need for "
+                     "supportive human review."
+                     if level == "High" else
+                     "Multiple indicators are strongly elevated together — priority welfare review "
+                     "with appropriate professional support is recommended.")
         elif level == "Moderate":
             text += "Early attention to these areas could prevent further escalation of the indicator."
         else:
@@ -125,7 +128,9 @@ class WelfareRiskEngine:
             recs.append("Review duty roster to reduce extended duty hours where feasible")
         if names & {"Job Satisfaction", "Self-Reported Stress"}:
             recs.append("Offer optional confidential welfare consultation")
-        if level in ("Moderate", "High"):
+        if level == "Critical":
+            recs.insert(0, "Immediate authorized welfare review with appropriate professional support")
+        if level in ("Moderate", "High", "Critical"):
             recs.append("Repeat wellbeing assessment in 7 days to track the trend")
         return recs or ["Continue routine weekly wellbeing check-ins"]
 
@@ -150,12 +155,7 @@ class WelfareRiskEngine:
         for i in range(n):
             p_low, p_mod, p_high = (float(proba[i][0]), float(proba[i][1]), float(proba[i][2]))
             risk_score = round(p_mod + p_high, 4)
-            if p_high >= 0.40 or risk_score >= 0.70:
-                level = "High"
-            elif risk_score >= 0.34:
-                level = "Moderate"
-            else:
-                level = "Low"
+            level = resolve_level(risk_score, p_high)
             factors = []
             for j, feat in enumerate(FEATURE_NAMES):
                 label = FACTOR_LABELS[feat]
@@ -171,6 +171,8 @@ class WelfareRiskEngine:
             results.append({
                 "risk_level": level, "risk_score": risk_score,
                 "confidence": round(0.60 + 0.37 * max(p_low, p_mod, p_high), 3),
+                "probs": [round(p_low, 4), round(p_mod, 4), round(p_high, 4)],
+                "sub_scores": compute_sub_scores(p_low, p_mod, p_high, factors),
                 "top_factors": factors[:3], "all_factors": factors,
                 "explanation": self._narrative(level, factors[:5]),
                 "recommendations": self._recommendations(level, factors[:5]),

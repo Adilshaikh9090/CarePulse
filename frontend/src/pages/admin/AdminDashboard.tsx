@@ -24,11 +24,11 @@ export default function AdminDashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Personnel tracked" value={o.total_personnel} icon={<Users size={15} />} sub="synthetic records" />
-        <StatCard label="High-risk indicators" value={o.current_risk_distribution.High} tone="rose"
+        <StatCard delay={0} label="Personnel tracked" value={o.total_personnel} icon={<Users size={15} />} sub="synthetic records" />
+        <StatCard delay={0.08} label="High-risk indicators" value={o.current_risk_distribution.High} tone="rose"
                   icon={<AlertTriangle size={15} />} sub={`${Math.round((o.current_risk_distribution.High / Math.max(o.total_personnel, 1)) * 100)}% of personnel`} />
-        <StatCard label="Open alerts" value={o.open_alerts} tone="amber" icon={<ClipboardList size={15} />} sub="awaiting review" />
-        <StatCard label="Active interventions" value={(Object.values(o.interventions_by_status) as number[])
+        <StatCard delay={0.16} label="Open alerts" value={o.open_alerts} tone="amber" icon={<ClipboardList size={15} />} sub="awaiting review" />
+        <StatCard delay={0.24} label="Active interventions" value={(Object.values(o.interventions_by_status) as number[])
                     .reduce((a, b) => a + b, 0)}
                   tone="emerald" icon={<HeartPulse size={15} />} sub="support in progress" />
       </div>
@@ -48,17 +48,17 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <Link to="/admin/early-warning" className="group rounded-2xl bg-navy-800/80 p-4 ring-1 ring-white/5 transition hover:ring-sky-500/40">
+        <Link to="/admin/early-warning" className="glass group rounded-2xl p-4 ring-1 ring-line card-elevate transition-all duration-300 hover:-translate-y-1 hover:ring-sky-500/40">
           <p className="text-sm font-semibold text-slate-100">Early Warning Center</p>
           <p className="mt-1 text-xs text-slate-400">{o.open_alerts} open signals need welfare review.</p>
           <p className="mt-2 text-xs font-medium text-sky-300 group-hover:text-sky-200">Open →</p>
         </Link>
-        <Link to="/admin/interventions" className="group rounded-2xl bg-navy-800/80 p-4 ring-1 ring-white/5 transition hover:ring-sky-500/40">
+        <Link to="/admin/interventions" className="glass group rounded-2xl p-4 ring-1 ring-line card-elevate transition-all duration-300 hover:-translate-y-1 hover:ring-sky-500/40">
           <p className="text-sm font-semibold text-slate-100">Interventions</p>
           <p className="mt-1 text-xs text-slate-400">{(Object.values(o.interventions_by_status) as number[]).reduce((a, b) => a + b, 0)} total · track support actions.</p>
           <p className="mt-2 text-xs font-medium text-sky-300 group-hover:text-sky-200">Manage →</p>
         </Link>
-        <Link to="/admin/reports" className="group rounded-2xl bg-navy-800/80 p-4 ring-1 ring-white/5 transition hover:ring-sky-500/40">
+        <Link to="/admin/reports" className="glass group rounded-2xl p-4 ring-1 ring-line card-elevate transition-all duration-300 hover:-translate-y-1 hover:ring-sky-500/40">
           <p className="text-sm font-semibold text-slate-100">Reports & exports</p>
           <p className="mt-1 text-xs text-slate-400">{o.pending_recommendations} recommendations pending across personnel.</p>
           <p className="mt-2 text-xs font-medium text-sky-300 group-hover:text-sky-200">View →</p>

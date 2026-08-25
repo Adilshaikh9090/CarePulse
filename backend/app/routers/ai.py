@@ -8,6 +8,7 @@ from ..ml import get_engine
 from ..models import RiskFactor, RiskPrediction, User
 from ..schemas import PredictRequest
 from ..security import get_current_user, require_roles
+from ..services.support_plan import build_support_plan
 from .personnel import own_prediction
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -30,6 +31,19 @@ def model_info(user: User = Depends(get_current_user)):
 @router.post("/predict")
 def predict(payload: PredictRequest, user: User = Depends(get_current_user)):
     return get_engine().predict(payload.model_dump())
+
+
+@router.post("/demo-predict")
+def demo_predict(payload: PredictRequest, user: User = Depends(get_current_user)):
+    """Scenario-driven demo prediction.
+
+    Runs the real model and rule-based support-plan builder but persists NOTHING —
+    demo runs never touch risk_predictions, welfare_recommendations or alerts.
+    """
+    result = get_engine().predict(payload.model_dump())
+    result["plan"] = build_support_plan(result["risk_level"], result["top_factors"])
+    result["is_demo"] = True
+    return result
 
 
 @router.get("/latest")

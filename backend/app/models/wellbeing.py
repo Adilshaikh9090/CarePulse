@@ -18,6 +18,8 @@ class WellbeingAssessment(Base):
     duty_hours: Mapped[float] = mapped_column(Float)
     overtime: Mapped[bool] = mapped_column(Boolean, default=False)
     rest_breaks: Mapped[str] = mapped_column(String(20), default="Adequate")  # Adequate|Limited|None
+    energy_level: Mapped[int | None] = mapped_column(Integer, nullable=True)        # 1 High · 2 Normal · 3 Low · 4 Very Low
+    emotional_fatigue: Mapped[int | None] = mapped_column(Integer, nullable=True)   # 1 None .. 5 Very High
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -27,9 +29,12 @@ class RiskPrediction(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
-    risk_level: Mapped[str] = mapped_column(String(12))   # Low | Moderate | High
+    risk_level: Mapped[str] = mapped_column(String(12))   # Low | Moderate | High | Critical
     risk_score: Mapped[float] = mapped_column(Float)
     confidence: Mapped[float] = mapped_column(Float)
+    stress_score: Mapped[int | None] = mapped_column(Integer, nullable=True)    # 0-100 prototype indicator
+    burnout_score: Mapped[int | None] = mapped_column(Integer, nullable=True)   # 0-100
+    fatigue_score: Mapped[int | None] = mapped_column(Integer, nullable=True)   # 0-100
     model_version: Mapped[str] = mapped_column(String(40), default="rf-prototype-1.0")
     input_json: Mapped[dict] = mapped_column(JSON, default=dict)
     explanation: Mapped[str | None] = mapped_column(Text, nullable=True)

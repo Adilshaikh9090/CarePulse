@@ -3,6 +3,7 @@ import { BrainCircuit, RefreshCw, SlidersHorizontal } from 'lucide-react'
 import * as api from '../../services'
 import { useAsync } from '../../hooks/useAsync'
 import AIProcessing from '../../components/AIProcessing'
+import SupportPlanCard from '../../components/SupportPlanCard'
 import {
   Button, Card, DisclaimerNote, Empty, ErrorNote, Field, Input, PageHeader, Spinner,
 } from '../../components/ui'
@@ -32,6 +33,7 @@ export default function Prediction() {
     setBusy(true); setError(null)
     try {
       setResult(await api.runPrediction(values))
+      await latest.reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Prediction failed.')
     } finally {
@@ -83,12 +85,19 @@ export default function Prediction() {
                     <p className="text-xs leading-relaxed text-slate-400">{shown.explanation}</p>
                   </div>
                 </div>
-                <ul className="mt-4 space-y-2">
-                  {(shown.recommendations ?? []).map((r) => (
-                    <li key={r} className="rounded-xl bg-white/[0.03] px-3 py-2 text-xs text-slate-300 ring-1 ring-white/5">• {r}</li>
-                  ))}
-                </ul>
               </Card>
+
+              {(shown.recommendation_items?.length ?? 0) > 0 && (
+                <SupportPlanCard
+                  items={shown.recommendation_items!}
+                  followUp={shown.follow_up}
+                  onChanged={async () => {
+                    const fresh = await api.fetchLatestPrediction()
+                    if (fresh) setResult(fresh)
+                    else { setResult(null); await latest.reload() }
+                  }}
+                />
+              )}
 
               <Card title="Why this result?" subtitle="Per-factor sensitivity analysis against a neutral baseline">
                 <ol className="space-y-2">

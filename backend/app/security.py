@@ -13,7 +13,8 @@ from .database import get_db
 from .models import User
 
 bearer_scheme = HTTPBearer(auto_error=False)
-ROLE_HOME = {"personnel": "/app", "welfare_officer": "/admin", "administrator": "/admin"}
+ROLE_HOME = {"personnel": "/app", "welfare_officer": "/admin", "administrator": "/admin",
+             "commander": "/admin"}
 
 
 def hash_password(password: str, salt: str | None = None) -> tuple[str, str]:

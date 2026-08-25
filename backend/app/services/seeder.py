@@ -5,10 +5,10 @@ from sqlalchemy import func
 
 from ..config import DEMO_PASSWORD, HISTORY_DAYS, SEED_USERS, WEEKLY_PREDICTION_WEEKS
 from ..database import Base, SessionLocal
-from ..ml import get_engine
-from ..models import (Alert, AuditLog, ConsentPreferences, Intervention, Notification,
-                      Report, RiskFactor, RiskPrediction, Role, Unit, User,
-                      WelfareRecommendation, WellbeingAssessment)
+from ..models import (Alert, AuditLog, ConsentPreferences, DeploymentRecord, DutyRecord,
+                      Intervention, LeaveRecord, Notification, Report, RiskFactor,
+                      RiskPrediction, Role, Unit, User, WelfareRecommendation,
+                      WellbeingAssessment)
 from ..security import hash_password
 from .synthetic_data import UNITS, DEMO_PERSONNEL_ID, build_history, generate_personnel, week_payload
 from .templates import REC_FALLBACK, REC_TEMPLATES, REPEAT_REC
@@ -25,6 +25,7 @@ def seed(force: bool = False) -> bool:
             db.commit()
 
         random.seed(42)
+        from ..ml import get_engine
         today = date.today()
         now = datetime.utcnow()
         pw_hash, salt = hash_password(DEMO_PASSWORD)
@@ -284,3 +285,114 @@ if __name__ == "__main__":
     print("Seeding…")
     changed = seed()
     print("Seeded." if changed else "Already seeded.")
+
+
+# ---------------- v2 backfill: runs on every startup for existing DBs ----------------
+V2_LOCATIONS = ["North Sector", "Border Post 7", "Central HQ", "Riverside Base",
+                "Coastal Station", "Highland Outpost"]
+DEP_TYPES = ["Field", "Border", "Peacekeeping", "Training", "Desk"]
+LEAVE_TYPES = ["Annual", "Sick", "Casual", "Earned"]
+DUTY_TITLES = ["Gate duty", "Patrol — sector 3", "Signals watch", "Convoy escort prep",
+               "Command post shift", "Equipment audit"]
+
+
+def ensure_v2_seed() -> None:
+    """Idempotent v2 data backfill for databases created before the v2 schema:
+    commander account, deployments, leave records, upcoming duties, alert status
+    variety, and sub-scores for historical predictions."""
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        today = date.today()
+        pw_hash, salt = hash_password("demo1234")
+
+        # commander account
+        if not db.query(User).filter(User.personnel_id == "CMDR-01").first():
+            db.add(User(personnel_id="CMDR-01", password_hash=pw_hash, salt=salt,
+                        full_name="Colonel R. Iyer", role="commander", unit=None,
+                        designation="Formation Commander", joining_date=date(2008, 4, 10),
+                        email="cmdr01@demo.example", phone="+91 9000111000"))
+            db.commit()
+
+        people = db.query(User).filter(User.role == "personnel").all()
+
+        if db.query(func.count(DeploymentRecord.id)).scalar() == 0 and people:
+            dep_rows, lv_rows, duty_rows = [], [], []
+            rnd = random.Random(99)
+            for p in people:
+                n_dep = rnd.randint(1, 3)
+                for k in range(n_dep):
+                    started = today - timedelta(days=rnd.randint(60, 900))
+                    active = k == 0
+                    dep_rows.append({
+                        "user_id": p.id, "unit_id": p.unit_id,
+                        "location": rnd.choice(V2_LOCATIONS),
+                        "deployment_type": rnd.choice(DEP_TYPES),
+                        "intensity": rnd.choice(["low", "medium", "high"]),
+                        "started_on": started,
+                        "ended_on": None if active else started + timedelta(days=rnd.randint(30, 180)),
+                        "status": "active" if active else "completed"})
+                year = today.year
+                for lt in LEAVE_TYPES:
+                    if rnd.random() < 0.7:
+                        days = rnd.randint(2, 12)
+                        start = today - timedelta(days=rnd.randint(20, 300))
+                        lv_rows.append({"user_id": p.id, "leave_type": lt, "days": days,
+                                        "start_date": start, "end_date": start + timedelta(days=days),
+                                        "status": "approved", "year": year})
+                for d in range(1, 6):
+                    dd = today + timedelta(days=d)
+                    if dd.weekday() >= 5 and rnd.random() < 0.5:
+                        continue
+                    duty_rows.append({
+                        "user_id": p.id, "title": rnd.choice(DUTY_TITLES), "duty_date": dd,
+                        "shift": rnd.choice(["Morning", "Afternoon", "Night"]),
+                        "location": rnd.choice(V2_LOCATIONS)})
+            for i in range(0, len(dep_rows), 2000):
+                db.execute(DeploymentRecord.__table__.insert(), dep_rows[i:i + 2000])
+            for i in range(0, len(lv_rows), 2000):
+                db.execute(LeaveRecord.__table__.insert(), lv_rows[i:i + 2000])
+            for i in range(0, len(duty_rows), 2000):
+                db.execute(DutyRecord.__table__.insert(), duty_rows[i:i + 2000])
+            db.commit()
+
+        # sub-scores for historical predictions that lack them (one-time)
+        missing = (db.query(RiskPrediction)
+                   .filter(RiskPrediction.stress_score.is_(None))
+                   .limit(4000).all())
+        if missing:
+            from ..ml import get_engine
+            from .scoring import compute_sub_scores
+            engine = get_engine().load()
+            payloads = [p.input_json or {} for p in missing]
+            results = engine.predict_batch(payloads)
+            for pred, r in zip(missing, results):
+                pred.stress_score = r["sub_scores"]["stress"]
+                pred.burnout_score = r["sub_scores"]["burnout"]
+                pred.fatigue_score = r["sub_scores"]["fatigue"]
+            db.commit()
+
+        # alert pipeline variety + reason codes for legacy rows
+        alerts = db.query(Alert).all()
+        changed = False
+        officers = db.query(User).filter(User.role == "welfare_officer").all()
+        for i, a in enumerate(alerts):
+            if a.reason_code in (None, "", "risk_detected") and not a.reviewed_by:
+                a.reason_code = {
+                    "high": "high_risk_detected",
+                    "critical": "critical_risk_detected",
+                }.get(a.severity, ["rising_trend", "repeated_poor_checkins",
+                                          "fatigue_pattern", "follow_up_overdue"][i % 4])
+                changed = True
+            if a.status in ("open", ""):
+                a.status = ["new", "new", "reviewing", "assigned", "resolved"][i % 5]
+                changed = True
+            if a.status == "assigned" and not a.assigned_officer_id and officers:
+                off = officers[i % len(officers)]
+                a.assigned_officer_id = off.id
+                a.assigned_officer_name = off.full_name
+                changed = True
+        if changed:
+            db.commit()
+    finally:
+        db.close()

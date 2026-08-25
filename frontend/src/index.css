@@ -4,12 +4,101 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
+/* ---------- Light theme (default — no class needed) ---------- */
+:root {
+  color-scheme: light;
+
+  --n950: 236 243 252;
+  --n900: 255 255 255;
+  --n800: 255 255 255;
+  --n700: 240 245 251;
+  --n600: 203 213 225;
+
+  --s50: 15 23 42;
+  --s100: 30 41 59;
+  --s200: 51 65 85;
+  --s300: 71 85 105;
+  --s400: 100 116 139;
+  --s500: 122 138 160;
+  --s600: 148 163 184;
+
+  --sky200: 2 132 199;
+  --sky300: 3 105 161;
+  --sky400: 7 89 133;
+  --rose200: 190 18 60;
+  --rose300: 225 29 72;
+  --rose400: 190 18 60;
+  --amber200: 146 64 14;
+  --amber300: 180 83 9;
+  --amber400: 161 98 7;
+  --em200: 4 120 87;
+  --em300: 5 150 105;
+  --em400: 4 108 78;
+  --vio200: 109 40 217;
+  --vio300: 91 33 182;
+
+  --line: rgba(15, 23, 42, 0.09);
+  --linestrong: rgba(15, 23, 42, 0.16);
+  --subtle: rgba(15, 23, 42, 0.04);
+  --hoverc: rgba(15, 23, 42, 0.07);
+
+  --gauge-track: rgba(15, 23, 42, 0.08);
+  --gauge-text: #0f172a;
+  --chart-grid: rgba(15, 23, 42, 0.07);
+  --tooltip-bg: #ffffff;
+  --tooltip-text: #1e293b;
+  --scroll-thumb: rgba(15, 23, 42, 0.18);
+}
+
+/* ---------- Dark theme (AI command center) ---------- */
+html.dark {
   color-scheme: dark;
+
+  /* spec tokens: bg #050B18 / #081326 · panels #101C38 / #121F40 */
+  --n950: 5 11 24;
+  --n900: 8 19 38;
+  --n800: 16 28 56;
+  --n700: 18 31 64;
+  --n600: 32 50 96;
+
+  --s50: 248 250 252;   /* F8FAFC */
+  --s100: 226 232 240;
+  --s200: 203 213 225;
+  --s300: 148 163 184;  /* 94A3B8 */
+  --s400: 148 163 184;
+  --s500: 100 116 139;
+  --s600: 71 85 105;
+
+  --sky200: 186 230 253;
+  --sky300: 125 211 252;
+  --sky400: 56 189 248; /* 38BDF8 primary accent */
+  --rose200: 254 205 211;
+  --rose300: 253 164 175;
+  --rose400: 251 113 133; /* F87171 error */
+  --amber200: 254 240 199;
+  --amber300: 252 211 77;
+  --amber400: 251 191 36; /* FBBF24 warning */
+  --em200: 167 243 208;
+  --em300: 110 231 183;
+  --em400: 52 211 153;    /* 34D399 success */
+  --vio200: 147 197 253;  /* 60A5FA secondary accent */
+  --vio300: 96 165 250;
+
+  --line: rgba(125, 211, 252, 0.10);
+  --linestrong: rgba(125, 211, 252, 0.20);
+  --subtle: rgba(148, 197, 253, 0.05);
+  --hoverc: rgba(148, 197, 253, 0.09);
+
+  --gauge-track: rgba(148, 197, 253, 0.12);
+  --gauge-text: #f1f5f9;
+  --chart-grid: rgba(125, 211, 252, 0.08);
+  --tooltip-bg: #101c38;
+  --tooltip-text: #e2e8f0;
+  --scroll-thumb: rgba(125, 211, 252, 0.16);
 }
 
 body {
-  @apply bg-navy-950 text-slate-200 antialiased;
+  @apply bg-navy-950 text-slate-200 antialiased transition-colors duration-300;
   font-feature-settings: 'cv02', 'cv03';
 }
 
@@ -18,9 +107,95 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--scroll-thumb);
   border-radius: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.card-elevate {
+  box-shadow: 0 18px 48px -18px rgba(2, 6, 23, 0.55),
+              0 0 0 1px rgba(56, 189, 248, 0.04) inset;
+}
+html:not(.dark) .card-elevate {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 12px 32px -14px rgba(30, 64, 175, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* airy blue wash behind the whole app (light mode) */
+html:not(.dark) body {
+  background:
+    radial-gradient(1100px 520px at 85% -8%, rgba(56, 189, 248, 0.10), transparent 60%),
+    radial-gradient(900px 480px at -5% 105%, rgba(96, 165, 250, 0.09), transparent 60%),
+    linear-gradient(180deg, #F2F7FD 0%, #E9F0FA 100%);
+  background-attachment: fixed;
+}
+
+/* glassmorphism panel */
+.glass {
+  background: color-mix(in srgb, rgb(var(--n800)) 78%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* animated border glow for hero cards */
+@keyframes borderGlow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.9; }
+}
+.border-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(56, 189, 248, 0.45), transparent 38%,
+    transparent 62%, rgba(96, 165, 250, 0.35));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: borderGlow 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* soft floating for hero card */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.float-slow { animation: floatY 7s ease-in-out infinite; }
+
+/* pulsing glow behind logo */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.06); }
+}
+.pulse-glow { animation: pulseGlow 3.2s ease-in-out infinite; }
+
+/* radar sweep for background canvas overlay */
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* SYSTEM ONLINE indicator dot */
+@keyframes onlinePing {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); }
+  70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+.online-dot { animation: onlinePing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .border-glow::before,
+  .float-slow,
+  .pulse-glow,
+  .online-dot {
+    animation: none !important;
+  }
+  body { transition: none; }
 }

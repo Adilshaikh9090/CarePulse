@@ -125,7 +125,7 @@ def create_user(payload: dict, user: User = Depends(ADMIN), db: Session = Depend
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "A valid Personnel ID is required.")
     if not name:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Full name is required.")
-    if role not in ("personnel", "welfare_officer", "administrator"):
+    if role not in ("personnel", "welfare_officer", "commander", "administrator"):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Invalid role.")
     if db.query(User).filter(User.personnel_id == pid).first():
         raise HTTPException(status.HTTP_409_CONFLICT, f"Personnel ID {pid} already exists.")
@@ -159,7 +159,7 @@ def update_user(user_id: int, payload: dict, admin: User = Depends(ADMIN),
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "You cannot deactivate your own account.")
         target.active = payload["active"]
         changes.append(f"active → {payload['active']}")
-    if "role" in payload and payload["role"] in ("personnel", "welfare_officer", "administrator"):
+    if "role" in payload and payload["role"] in ("personnel", "welfare_officer", "commander", "administrator"):
         target.role = payload["role"]
         changes.append(f"role → {payload['role']}")
     if "unit_id" in payload:
@@ -204,3 +204,166 @@ def broadcast(payload: dict, user: User = Depends(ADMIN), db: Session = Depends(
     log_action(db, user, "Broadcast notification", title[:60])
     db.commit()
     return {"message": f"Notification sent to {len(recipients)} users."}
+
+
+# ---------------- units management ----------------
+@router.get("/units")
+def list_units(user: User = Depends(ADMIN), db: Session = Depends(get_db)):
+    units = db.query(Unit).order_by(Unit.name.asc()).all()
+    return {"items": [{"id": u.id, "name": u.name, "code": u.code, "location": u.location,
+                       "strength": u.strength} for u in units]}
+
+
+@router.post("/units")
+def create_unit(payload: dict, user: User = Depends(ADMIN), db: Session = Depends(get_db)):
+    name = str(payload.get("name", "")).strip()
+    code = str(payload.get("code", "")).strip().upper()
+    if not name or not code:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unit name and code are required.")
+    if db.query(Unit).filter((Unit.name == name) | (Unit.code == code)).first():
+        raise HTTPException(status.HTTP_409_CONFLICT, "A unit with that name or code exists.")
+    u = Unit(name=name, code=code, location=str(payload.get("location", "")).strip())
+    db.add(u)
+    log_action(db, user, "Created unit", f"{name} ({code})")
+    db.commit()
+    return {"message": f"Unit {name} created.", "id": u.id}
+
+
+@router.put("/units/{unit_id}")
+def update_unit(unit_id: int, payload: dict, user: User = Depends(ADMIN),
+                db: Session = Depends(get_db)):
+    u = db.query(Unit).filter(Unit.id == unit_id).first()
+    if not u:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unit not found.")
+    if "location" in payload:
+        u.location = str(payload["location"]).strip()
+    if "name" in payload and str(payload["name"]).strip():
+        u.name = str(payload["name"]).strip()
+    log_action(db, user, "Updated unit", u.name)
+    db.commit()
+    return {"message": f"Unit {u.name} updated."}
+
+
+# ---------------- system settings ----------------
+DEFAULT_SETTINGS = {
+    "notifications": {
+        "checkin_reminder_days": 7,
+        "quiet_hours": "22:00-06:00",
+        "channels": ["in_app"],
+        "high_risk_notify_officers": True,
+        "language": "en",
+    },
+    "system": {
+        "maintenance_mode": False,
+        "session_timeout_minutes": 720,
+        "data_region": "local-prototype",
+    },
+}
+
+
+def _get_setting(db: Session, key: str) -> dict:
+    from ..models import SystemSetting
+    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+    base = dict(DEFAULT_SETTINGS.get(key.split(".")[0], {}))
+    if row and isinstance(row.value, dict):
+        base.update(row.value)
+    return base
+
+
+def _put_setting(db: Session, key: str, value: dict):
+    from ..models import SystemSetting
+    row = db.query(SystemSetting).filter(SystemSetting.key == key).first()
+    if not row:
+        row = SystemSetting(key=key, value=value)
+        db.add(row)
+    else:
+        merged = dict(row.value or {})
+        merged.update(value)
+        row.value = merged
+    row.updated_at = datetime.utcnow()
+
+
+@router.get("/settings")
+def get_settings(section: str | None = None, user: User = Depends(ADMIN), db=Depends(get_db)):
+    return {
+        "notifications": _get_setting(db, "notifications.settings"),
+        "system": _get_setting(db, "system.settings"),
+    }
+
+
+@router.put("/settings")
+def put_settings(payload: dict, user: User = Depends(ADMIN), db=Depends(get_db)):
+    changed = []
+    if isinstance(payload.get("notifications"), dict):
+        _put_setting(db, "notifications.settings", payload["notifications"])
+        changed.append("notifications")
+    if isinstance(payload.get("system"), dict):
+        _put_setting(db, "system.settings", payload["system"])
+        changed.append("system")
+    log_action(db, user, "Updated system settings", ", ".join(changed) or "none")
+    db.commit()
+    return {"message": f"Settings updated ({', '.join(changed) or 'no changes'}).",
+            "notifications": _get_setting(db, "notifications.settings"),
+            "system": _get_setting(db, "system.settings")}
+
+
+@router.get("/model-config")
+def get_model_config(user: User = Depends(ADMIN), db=Depends(get_db)):
+    from ..ml import get_engine
+    eng = get_engine()
+    cfg = _get_setting(db, "model.config")
+    return {
+        "model_version": "rf-prototype-1.0",
+        "algorithm": "RandomForestClassifier (220 trees, max_depth 14)",
+        "training_records": 24000,
+        "features": 9,
+        "metrics": eng.metrics,
+        "thresholds": {
+            "moderate_min": cfg.get("moderate_min", 0.34),
+            "high_min": cfg.get("high_min", 0.70),
+            "critical_min": cfg.get("critical_min", 0.85),
+            "confidence_floor": cfg.get("confidence_floor", 0.60),
+        },
+        "retrain_available": True,
+        "note": ("Prototype model on synthetic data. Threshold changes apply to new "
+                 "predictions only."),
+    }
+
+
+@router.put("/model-config")
+def put_model_config(payload: dict, user: User = Depends(ADMIN), db=Depends(get_db)):
+    th = payload.get("thresholds") or {}
+    clean = {}
+    for k in ("moderate_min", "high_min", "critical_min", "confidence_floor"):
+        if k in th:
+            try:
+                clean[k] = float(th[k])
+            except (TypeError, ValueError):
+                pass
+    _put_setting(db, "model.config", clean)
+    log_action(db, user, "Updated AI model configuration", str(clean))
+    db.commit()
+    return {"message": "Model configuration saved.", **get_model_config(user, db)}
+
+
+@router.post("/model/retrain")
+def retrain_model(user: User = Depends(ADMIN)):
+    from ..ml import get_engine
+    metrics = get_engine().train()
+    log_action(db, user, "Retrained AI model", "rf-prototype-1.0")
+    return {"message": "Model retrained on the synthetic dataset.", "metrics": metrics}
+
+
+@router.get("/permissions")
+def permissions_matrix(user: User = Depends(ADMIN)):
+    return {"roles": [
+        {"role": "personnel", "permissions": ["own:read", "own:export", "consent:write",
+                                              "checkin:create", "assistant:use"]},
+        {"role": "welfare_officer", "permissions": ["aggregate:read", "alerts:review",
+                                                    "interventions:*", "personnel:welfare-read",
+                                                    "reports:read"]},
+        {"role": "commander", "permissions": ["aggregate:read", "analytics:read", "insights:read"]},
+        {"role": "administrator", "permissions": ["users:*", "units:*", "settings:*",
+                                                  "audit:read", "broadcast:*",
+                                                  "aggregate:read", "interventions:*"]},
+    ]}

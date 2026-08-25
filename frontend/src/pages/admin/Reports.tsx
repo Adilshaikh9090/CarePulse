@@ -36,17 +36,17 @@ export default function Reports() {
               <RiskPie counts={o.current_risk_distribution} />
             </div>
             <ul className="space-y-2 self-center text-sm lg:col-span-3">
-              <li className="flex justify-between rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <li className="flex justify-between rounded-xl bg-subtle px-3 py-2 ring-1 ring-line">
                 <span className="text-slate-300">Total personnel</span><strong>{o.total_personnel}</strong>
               </li>
-              <li className="flex justify-between rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <li className="flex justify-between rounded-xl bg-subtle px-3 py-2 ring-1 ring-line">
                 <span className="text-slate-300">High / Moderate / Low</span>
                 <strong>{o.current_risk_distribution.High} / {o.current_risk_distribution.Moderate} / {o.current_risk_distribution.Low}</strong>
               </li>
-              <li className="flex justify-between rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <li className="flex justify-between rounded-xl bg-subtle px-3 py-2 ring-1 ring-line">
                 <span className="text-slate-300">Open early-warning alerts</span><strong>{o.open_alerts}</strong>
               </li>
-              <li className="flex justify-between rounded-xl bg-white/[0.03] px-3 py-2 ring-1 ring-white/5">
+              <li className="flex justify-between rounded-xl bg-subtle px-3 py-2 ring-1 ring-line">
                 <span className="text-slate-300">Interventions by status</span>
                 <strong className="text-right">{Object.entries(o.interventions_by_status).map(([s, n]) => `${s.replace('_', ' ')}: ${n}`).join(', ')}</strong>
               </li>

@@ -46,14 +46,14 @@ export default function ChatAssistant() {
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label="Welfare assistant chat"
-        className="fixed bottom-5 right-5 z-40 flex h-13 w-13 items-center justify-center rounded-full bg-sky-500 p-3.5 text-navy-950 shadow-lg shadow-sky-500/30 transition hover:bg-sky-400"
+        className="fixed bottom-24 right-5 z-40 flex h-13 w-13 lg:bottom-5 items-center justify-center rounded-full bg-sky-600 p-3.5 text-white shadow-lg shadow-sky-500/30 transition hover:bg-sky-700"
       >
         {open ? <X size={20} /> : <MessageCircle size={20} />}
       </button>
 
       {open && (
-        <div className="fixed bottom-20 right-5 z-40 flex h-[440px] w-[min(92vw,360px)] flex-col overflow-hidden rounded-2xl bg-navy-800 shadow-2xl ring-1 ring-white/10">
-          <header className="flex items-center gap-2 border-b border-white/5 px-4 py-3">
+        <div className="fixed bottom-20 right-5 z-40 flex h-[440px] w-[min(92vw,360px)] glass flex-col overflow-hidden rounded-2xl shadow-2xl ring-1 ring-linestrong">
+          <header className="flex items-center gap-2 border-b border-line px-4 py-3">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300"><Bot size={15} /></span>
             <div>
               <p className="text-xs font-semibold text-slate-100">Welfare Assistant</p>
@@ -66,8 +66,8 @@ export default function ChatAssistant() {
               <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <p className={`max-w-[82%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-sky-500 text-navy-950 font-medium'
-                    : 'bg-white/[0.05] text-slate-300 ring-1 ring-white/5'
+                    ? 'bg-sky-600 text-white font-medium'
+                    : 'bg-subtle text-slate-300 ring-1 ring-line'
                 }`}>
                   {m.content}
                 </p>
@@ -77,7 +77,7 @@ export default function ChatAssistant() {
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {QUICK_PROMPTS.map((q) => (
                   <button key={q} onClick={() => send(q)}
-                          className="rounded-full bg-white/[0.04] px-2.5 py-1 text-[10px] text-slate-400 ring-1 ring-white/10 hover:text-slate-200">
+                          className="rounded-full bg-subtle px-2.5 py-1 text-[10px] text-slate-400 ring-1 ring-linestrong hover:text-slate-200">
                     {q}
                   </button>
                 ))}
@@ -85,7 +85,7 @@ export default function ChatAssistant() {
             )}
           </div>
 
-          <footer className="flex items-center gap-2 border-t border-white/5 p-2.5">
+          <footer className="flex items-center gap-2 border-t border-line p-2.5">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -94,7 +94,7 @@ export default function ChatAssistant() {
               className="min-w-0 flex-1 rounded-lg border-0 bg-navy-700 px-3 py-2 text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
             <button onClick={() => send()} disabled={busy || !input.trim()}
-                    className="rounded-lg bg-sky-500 p-2 text-navy-950 disabled:opacity-40">
+                    className="rounded-lg bg-sky-600 p-2 text-white disabled:opacity-40">
               <Send size={14} />
             </button>
           </footer>

@@ -32,7 +32,7 @@ export default function Wellness() {
       <Card className="mt-4" title="Frequently asked questions" subtitle="Transparency about the AI and your rights">
         <div className="space-y-3">
           {FAQ.map(([q, a]) => (
-            <details key={q} className="group rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/5">
+            <details key={q} className="group rounded-xl bg-subtle px-4 py-3 ring-1 ring-line">
               <summary className="cursor-pointer list-none text-sm font-medium text-slate-200 marker:hidden group-open:text-sky-300">
                 {q}
               </summary>

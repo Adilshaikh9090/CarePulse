@@ -1,17 +1,20 @@
 import type { RiskLevel } from '../types'
 
 export const riskColor = (level: RiskLevel | string): string =>
-  level === 'High' ? '#f87171' : level === 'Moderate' ? '#fbbf24' : '#34d399'
+  level === 'Critical' ? '#e879f9'
+    : level === 'High' ? '#f87171' : level === 'Moderate' ? '#fbbf24' : '#34d399'
 
 export const riskBadge = (level: RiskLevel | string): string =>
-  level === 'High'
-    ? 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/40'
-    : level === 'Moderate'
-      ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40'
-      : 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40'
+  level === 'Critical'
+    ? 'bg-fuchsia-600/20 text-fuchsia-300 ring-1 ring-fuchsia-500/50'
+    : level === 'High'
+      ? 'bg-rose-500/15 text-rose-300 ring-1 ring-rose-500/40'
+      : level === 'Moderate'
+        ? 'bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40'
+        : 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/40'
 
 export const sevColor = (sev: string): string =>
-  sev === 'high' ? '#f87171' : sev === 'moderate' ? '#fbbf24' : '#38bdf8'
+  sev === 'critical' ? '#e879f9' : sev === 'high' ? '#f87171' : sev === 'moderate' ? '#fbbf24' : '#38bdf8'
 
 export const fmtDate = (iso: string | null | undefined): string => {
   if (!iso) return '—'

@@ -13,9 +13,16 @@ model.pkl
 node_modules/
 dist/
 .vite/
+*.tsbuildinfo
 
 # Env & IDE
 .env
 .env.local
 .vscode/
 .idea/
+
+# Logs
+*.log
+backend/error.log
+backend/uvicorn_err.log
+backend/uvicorn_out.log

@@ -3,9 +3,11 @@ const USER_KEY = 'carepulse_user'
 
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  code?: string
+  constructor(message: string, status: number, code?: string) {
     super(message)
     this.status = status
+    this.code = code
   }
 }
 
@@ -40,12 +42,26 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   }
   if (!res.ok) {
     let detail = `Request failed (${res.status})`
+    let code: string | undefined
     try {
       const data = await res.json()
-      detail = typeof data.detail === 'string' ? data.detail : detail
+      if (typeof data.detail === 'string') {
+        detail = data.detail
+      } else if (data.detail && typeof data.detail === 'object' && !Array.isArray(data.detail)
+                 && data.detail.message) {
+        detail = String(data.detail.message)
+        code = data.detail.code ? String(data.detail.code) : undefined
+      } else if (Array.isArray(data.detail)) {
+        const first = data.detail[0]
+        const field = Array.isArray(first.loc) ? first.loc.filter((p: unknown) => p !== 'body').join('.') : ''
+        detail = first.msg ? `${field ? field + ': ' : ''}${first.msg}` : detail
+      }
     } catch { /* keep default */ }
-    if (res.status === 401 && !path.startsWith('/auth/login')) tokenStore.clear()
-    throw new ApiError(detail, res.status)
+    if (res.status === 401 && !path.startsWith('/auth/login')) {
+      tokenStore.clear()
+      window.dispatchEvent(new CustomEvent('carepulse:unauthorized'))
+    }
+    throw new ApiError(detail, res.status, code)
   }
   return res.json() as Promise<T>
 }

@@ -35,6 +35,7 @@ class ConsentPreferences(Base):
     wellbeing_checkins: Mapped[bool] = mapped_column(Boolean, default=True)
     optional_feedback: Mapped[bool] = mapped_column(Boolean, default=True)
     notifications_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    biometric_consent: Mapped[bool] = mapped_column(Boolean, default=False)  # optional, off by default
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
@@ -48,6 +49,13 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     status: Mapped[str] = mapped_column(String(20), default="ready")
     meta_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+    key: Mapped[str] = mapped_column(String(60), primary_key=True)
+    value: Mapped[dict | list | str | int | float | bool] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
 def audit(db, actor, action: str, resource: str = "", result: str = "Successful"):

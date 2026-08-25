@@ -48,7 +48,7 @@ export default function History() {
                   header: 'Indicator',
                   cell: (i) => (
                     <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-white/5">
+                      <div className="h-1.5 w-24 overflow-hidden rounded-full bg-hoverc">
                         <div className="h-full rounded-full" style={{ width: `${Math.round(i.risk_score * 100)}%`, background: riskColor(i.risk_level) }} />
                       </div>
                       <span className="text-xs text-slate-400">{Math.round(i.risk_score * 100)}%</span>

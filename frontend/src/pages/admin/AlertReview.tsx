@@ -41,7 +41,7 @@ export default function AlertReview() {
           ) : (
           <ul className="space-y-2.5">
             {data!.items.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white/[0.03] px-4 py-3 ring-1 ring-white/5">
+              <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-subtle px-4 py-3 ring-1 ring-line">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-200">{a.title}</p>
                   <p className="mt-0.5 text-[11px] text-slate-500">

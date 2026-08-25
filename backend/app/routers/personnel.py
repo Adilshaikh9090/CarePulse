@@ -12,7 +12,8 @@ from ..schemas import (CheckInRequest, ChatRequest, ConsentUpdate, PasswordChang
                        PredictRequest, ProfileUpdate, RecommendationAction, UserOut)
 from ..security import hash_password, verify_password, get_current_user, require_roles
 from ..services.synthetic_data import checkin_payload
-from ..services.templates import REC_FALLBACK, REC_TEMPLATES, REPEAT_REC
+from ..services.support_plan import build_support_plan
+from ..services.templates import REPEAT_REC
 
 router = APIRouter(prefix="/personnel", tags=["personnel"])
 OFFICER_OR_ADMIN = require_roles("welfare_officer", "administrator")
@@ -24,13 +25,104 @@ def own_prediction(pred: RiskPrediction) -> dict:
     return {
         "id": pred.id, "created_at": pred.created_at.isoformat() + "Z",
         "risk_level": pred.risk_level, "risk_score": pred.risk_score,
-        "confidence": pred.confidence, "model_version": pred.model_version,
+        "confidence": pred.confidence,
+        "sub_scores": {"stress": pred.stress_score or 0, "burnout": pred.burnout_score or 0,
+                       "fatigue": pred.fatigue_score or 0},
+        "model_version": pred.model_version,
         "top_factors": factors[:3], "all_factors": factors,
         "explanation": pred.explanation or "",
         "recommendations": pred.recommendations or [],
-        "disclaimer": ("This prediction is an AI-generated welfare indicator and is not a medical "
-                       "diagnosis. Human review by authorized welfare personnel is required before any action."),
+        "disclaimer": ("AI-generated wellness indicator — not a medical diagnosis. "
+                       "Human welfare review is required before any intervention."),
     }
+
+
+def _store_support_plan(db: Session, user: User, pred: RiskPrediction, result: dict) -> None:
+    """Persist the rule-based welfare support plan for a fresh prediction."""
+    plan = build_support_plan(result["risk_level"], result["top_factors"])
+    for prio, step in enumerate(plan, start=1):
+        db.add(WelfareRecommendation(
+            user_id=user.id, prediction_id=pred.id, priority=prio,
+            title=step["title"], reason=step["reason"], timeframe=step["timeframe"],
+            tier=step["tier"], category=step.get("category", ""),
+            actions=step.get("actions", []),
+            support_text="\n".join(step.get("support", {}).get("lines", [])),
+            status="pending"))
+    db.add(WelfareRecommendation(user_id=user.id, prediction_id=pred.id, priority=len(plan) + 1,
+                                 **REPEAT_REC, tier="optional", category="Follow-up"))
+
+
+def _serialize_rec(r: WelfareRecommendation) -> dict:
+    return {
+        "id": r.id, "title": r.title, "reason": r.reason, "timeframe": r.timeframe,
+        "priority": r.priority, "status": r.status,
+        "tier": r.tier or ("recommended" if r.priority <= 2 else "optional"),
+        "category": r.category or "",
+        "actions": r.actions or [],
+        "support_text": r.support_text or "",
+        "snoozed_until": r.snoozed_until.isoformat() + "Z" if r.snoozed_until else None,
+        "created_at": r.created_at.date().isoformat(),
+    }
+
+
+def _follow_up_info(db: Session, user: User) -> dict:
+    """Next check-in guidance: 7-day cadence + reminder state."""
+    last = (db.query(WellbeingAssessment).filter(WellbeingAssessment.user_id == user.id)
+            .order_by(WellbeingAssessment.entry_date.desc()).first())
+    anchor = last.entry_date if last else datetime.utcnow().date()
+    next_due = anchor + timedelta(days=7)
+    days_until = (next_due - datetime.utcnow().date()).days
+    last_created = (db.query(WellbeingAssessment).filter(WellbeingAssessment.user_id == user.id)
+                    .order_by(WellbeingAssessment.created_at.desc()).first())
+    reminder_set = False
+    if last_created is not None:
+        reminder_set = bool(
+            db.query(Notification)
+            .filter(Notification.user_id == user.id,
+                    Notification.category == "checkin_reminder",
+                    Notification.created_at >= last_created.created_at)
+            .first())
+    return {
+        "cadence_days": 7,
+        "last_checkin": last.entry_date.isoformat() if last else None,
+        "next_recommended": next_due.isoformat(),
+        "days_until": max(days_until, 0),
+        "reminder_set": reminder_set,
+    }
+
+
+def _persist_prediction(db: Session, user: User, features: dict, result: dict,
+                        created_at: datetime | None = None) -> RiskPrediction:
+    sub = result.get("sub_scores", {})
+    pred = RiskPrediction(
+        user_id=user.id, risk_level=result["risk_level"], risk_score=result["risk_score"],
+        confidence=result["confidence"], stress_score=sub.get("stress"),
+        burnout_score=sub.get("burnout"), fatigue_score=sub.get("fatigue"),
+        model_version=result["model_version"], input_json=features,
+        explanation=result["explanation"], recommendations=result["recommendations"],
+        created_at=created_at or datetime.utcnow())
+    db.add(pred)
+    db.flush()
+    for prio, f in enumerate(result["top_factors"], start=1):
+        db.add(RiskFactor(prediction_id=pred.id, name=f["name"], impact=f["impact"],
+                          direction=f["direction"], description=f["description"]))
+    return pred
+
+
+def _maybe_alert(db: Session, user: User, result: dict) -> None:
+    if result["risk_level"] in ("High", "Critical"):
+        sev = "critical" if result["risk_level"] == "Critical" else "high"
+        prefix = "Critical welfare-support need" if sev == "critical" else "High welfare-support need"
+        db.add(Alert(code=f"EW-{datetime.utcnow().strftime('%H%M%S%f')[:10]}", scope="individual",
+                     unit_id=user.unit_id, subject_user_id=user.id,
+                     title=f"{prefix} flagged — {user.personnel_id}",
+                     severity=sev, reason_code="high_risk_detected",
+                     detected_at=datetime.utcnow(),
+                     factors=[f["name"] for f in result["top_factors"]],
+                     recommendation=("Priority welfare officer review with appropriate professional "
+                                     "support." if sev == "critical" else
+                                     "Assign welfare officer for supportive human review."),
+                     status="new"))
 
 
 # ---------------- profile ----------------
@@ -99,47 +191,48 @@ def submit_assessment(payload: CheckInRequest, user: User = Depends(get_current_
 
     row = WellbeingAssessment(
         user_id=user.id, entry_date=today, feeling=payload.feeling,
-        sleep_quality=payload.sleep_quality, fatigue=payload.fatigue,
-        workload=payload.workload, job_satisfaction=payload.job_satisfaction,
-        duty_hours=payload.duty_hours, overtime=payload.overtime,
-        rest_breaks=payload.rest_breaks, comment=payload.comment or None,
+        sleep_quality=payload.sleep_quality, fatigue=payload.emotional_fatigue or payload.fatigue or 3,
+        workload=payload.workload, job_satisfaction=payload.job_satisfaction or 3,
+        duty_hours=payload.duty_hours or 8.0, overtime=bool(payload.overtime),
+        rest_breaks=payload.rest_breaks or "Adequate",
+        energy_level=payload.energy_level, emotional_fatigue=payload.emotional_fatigue,
+        comment=payload.comment or None,
         created_at=datetime.utcnow(),
     )
     db.add(row)
 
-    # run fresh prediction from this check-in
+    # run fresh prediction from this check-in (v2 heuristics fill legacy gaps)
     features = checkin_payload({
-        "workload": payload.workload, "fatigue": payload.fatigue,
+        "workload": payload.workload, "fatigue": row.fatigue,
         "sleep_quality": payload.sleep_quality, "duty_hours": payload.duty_hours,
         "overtime": payload.overtime, "job_satisfaction": payload.job_satisfaction,
         "rest_breaks": payload.rest_breaks, "feeling": payload.feeling,
+        "energy_level": payload.energy_level, "emotional_fatigue": payload.emotional_fatigue,
     }, prev.workload if prev else None)
     result = get_engine().predict(features)
-    pred = RiskPrediction(user_id=user.id, risk_level=result["risk_level"],
-                          risk_score=result["risk_score"], confidence=result["confidence"],
-                          model_version=result["model_version"], input_json=features,
-                          explanation=result["explanation"], recommendations=result["recommendations"],
-                          created_at=datetime.utcnow())
-    db.add(pred)
-    db.flush()
-
-    for prio, f in enumerate(result["top_factors"], start=1):
-        db.add(RiskFactor(prediction_id=pred.id, name=f["name"], impact=f["impact"],
-                          direction=f["direction"], description=f["description"]))
-    for prio, fname in enumerate([f["name"] for f in result["top_factors"]], start=1):
-        title, reason, timeframe = REC_TEMPLATES.get(fname, REC_FALLBACK)
-        db.add(WelfareRecommendation(user_id=user.id, prediction_id=pred.id, priority=prio,
-                                     title=title, reason=reason, timeframe=timeframe))
-    db.add(WelfareRecommendation(user_id=user.id, prediction_id=pred.id, priority=4, **REPEAT_REC))
+    pred = _persist_prediction(db, user, features, result)
+    _store_support_plan(db, user, pred, result)
     db.add(Notification(user_id=user.id, category="system",
                         title="Wellbeing assessment received",
                         body="Thank you. Your latest wellbeing indicators have been recorded securely.",
                         created_at=datetime.utcnow()))
     db.commit()
-    return {"message": "Check-in recorded.", "prediction_id": pred.id, "prediction": own_prediction(pred)}
+    return {"message": "Check-in recorded.", "prediction_id": pred.id,
+            "prediction": _prediction_with_plan(db, user, pred)}
 
 
 # ---------------- predictions ----------------
+def _prediction_with_plan(db: Session, user: User, pred: RiskPrediction) -> dict:
+    """Prediction + its persisted support plan + follow-up guidance."""
+    p = own_prediction(pred)
+    recs = (db.query(WelfareRecommendation)
+            .filter(WelfareRecommendation.prediction_id == pred.id)
+            .order_by(WelfareRecommendation.priority.asc()).all())
+    p["recommendation_items"] = [_serialize_rec(r) for r in recs]
+    p["follow_up"] = _follow_up_info(db, user)
+    return p
+
+
 @router.get("/predictions/latest")
 def latest_prediction(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     pred = (db.query(RiskPrediction)
@@ -147,15 +240,7 @@ def latest_prediction(user: User = Depends(get_current_user), db: Session = Depe
             .order_by(RiskPrediction.created_at.desc()).first())
     if not pred:
         return None
-    p = own_prediction(pred)
-    recs = (db.query(WelfareRecommendation)
-            .filter(WelfareRecommendation.prediction_id == pred.id)
-            .order_by(WelfareRecommendation.priority.asc()).all())
-    p["recommendation_items"] = [{
-        "id": r.id, "title": r.title, "reason": r.reason, "timeframe": r.timeframe,
-        "priority": r.priority, "status": r.status,
-    } for r in recs]
-    return p
+    return _prediction_with_plan(db, user, pred)
 
 
 @router.get("/predictions/history")
@@ -185,31 +270,69 @@ def run_prediction(payload: PredictRequest, user: User = Depends(get_current_use
                    db: Session = Depends(get_db)):
     features = payload.model_dump()
     result = get_engine().predict(features)
-    pred = RiskPrediction(user_id=user.id, risk_level=result["risk_level"],
-                          risk_score=result["risk_score"], confidence=result["confidence"],
-                          model_version=result["model_version"], input_json=features,
-                          explanation=result["explanation"], recommendations=result["recommendations"],
-                          created_at=datetime.utcnow())
-    db.add(pred)
-    db.flush()
-    for prio, f in enumerate(result["top_factors"], start=1):
-        db.add(RiskFactor(prediction_id=pred.id, name=f["name"], impact=f["impact"],
-                          direction=f["direction"], description=f["description"]))
-    for prio, fname in enumerate([f["name"] for f in result["top_factors"]], start=1):
-        title, reason, timeframe = REC_TEMPLATES.get(fname, REC_FALLBACK)
-        db.add(WelfareRecommendation(user_id=user.id, prediction_id=pred.id, priority=prio,
-                                     title=title, reason=reason, timeframe=timeframe))
-    db.add(WelfareRecommendation(user_id=user.id, prediction_id=pred.id, priority=4, **REPEAT_REC))
-
-    if result["risk_level"] == "High":
-        db.add(Alert(code=f"EW-{datetime.utcnow().strftime('%H%M%S')}", scope="individual",
-                     unit_id=user.unit_id, subject_user_id=user.id,
-                     title=f"High welfare-support need flagged — {user.personnel_id}",
-                     severity="high", detected_at=datetime.utcnow(),
-                     factors=[f["name"] for f in result["top_factors"]],
-                     recommendation="Assign welfare officer for supportive human review.", status="open"))
+    pred = _persist_prediction(db, user, features, result)
+    _store_support_plan(db, user, pred, result)
+    _maybe_alert(db, user, result)
     db.commit()
-    return own_prediction(pred)
+    return _prediction_with_plan(db, user, pred)
+
+
+@router.post("/follow-up/reminder")
+def schedule_followup_reminder(user: User = Depends(get_current_user),
+                               db: Session = Depends(get_db)):
+    """Schedule a gentle next-check-in reminder (idempotent per day)."""
+    info = _follow_up_info(db, user)
+    today = datetime.utcnow().date()
+    existing_today = (db.query(Notification)
+                      .filter(Notification.user_id == user.id,
+                              Notification.category == "checkin_reminder",
+                              Notification.created_at >= datetime.combine(today, datetime.min.time()))
+                      .first())
+    if existing_today:
+        return {"message": "Reminder already scheduled.", "next_check_in": info["next_recommended"],
+                "reminder_set": True}
+    db.add(Notification(
+        user_id=user.id, category="checkin_reminder",
+        title="Check-in reminder scheduled",
+        body=(f"We'll gently remind you to complete your next wellbeing check-in around "
+              f"{info['next_recommended']} ({info['cadence_days']}-day cadence). "
+              f"Participation remains voluntary."),
+        created_at=datetime.utcnow()))
+    db.commit()
+    return {"message": f"Reminder scheduled — we'll nudge you around {info['next_recommended']}.",
+            "next_check_in": info["next_recommended"], "reminder_set": True}
+
+
+# ---------------- duties & leave ----------------
+@router.get("/duties")
+def upcoming_duties(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from ..models import DutyRecord
+    today = datetime.utcnow().date()
+    rows = (db.query(DutyRecord).filter(DutyRecord.user_id == user.id,
+                                        DutyRecord.duty_date >= today)
+            .order_by(DutyRecord.duty_date.asc()).limit(6).all())
+    return {"items": [{"id": d.id, "title": d.title, "date": d.duty_date.isoformat(),
+                       "shift": d.shift, "location": d.location} for d in rows]}
+
+
+@router.get("/leave")
+def leave_summary(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from ..models import LeaveRecord
+    year = datetime.utcnow().year
+    rows = db.query(LeaveRecord).filter(LeaveRecord.user_id == user.id,
+                                        LeaveRecord.year == year).all()
+    entitlement = {"Annual": 30, "Earned": 15, "Sick": 10, "Casual": 8}
+    summary = {}
+    for lt, total in entitlement.items():
+        used = sum(r.days for r in rows if r.leave_type == lt and r.status == "approved")
+        pending = sum(r.days for r in rows if r.leave_type == lt and r.status == "pending")
+        summary[lt] = {"entitled": total, "used": used, "pending": pending,
+                       "remaining": max(total - used - pending, 0)}
+    recent = sorted(rows, key=lambda r: r.start_date, reverse=True)[:5]
+    return {"year": year, "summary": summary,
+            "recent": [{"id": r.id, "type": r.leave_type, "days": r.days,
+                        "start": r.start_date.isoformat(), "end": r.end_date.isoformat(),
+                        "status": r.status} for r in recent]}
 
 
 # ---------------- recommendations / consent / notifications ----------------
@@ -221,11 +344,7 @@ def my_recommendations(status: str | None = None, user: User = Depends(get_curre
          .order_by(WelfareRecommendation.created_at.desc(), WelfareRecommendation.priority.asc()))
     if status:
         q = q.filter(WelfareRecommendation.status == status)
-    return {"items": [{
-        "id": r.id, "title": r.title, "reason": r.reason, "timeframe": r.timeframe,
-        "priority": r.priority, "status": r.status,
-        "created_at": r.created_at.date().isoformat(),
-    } for r in q.limit(50).all()]}
+    return {"items": [_serialize_rec(r) for r in q.limit(50).all()]}
 
 
 @router.post("/recommendations/{rec_id}/action")
@@ -236,10 +355,17 @@ def recommendation_action(rec_id: int, payload: RecommendationAction,
         WelfareRecommendation.user_id == user.id).first()
     if not rec:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Recommendation not found.")
-    rec.status = payload.action
+    if payload.action == "remind_later":
+        rec.snoozed_until = datetime.utcnow() + timedelta(days=2)
+        message = f"We'll check back about “{rec.title}” in a couple of days."
+    else:
+        rec.status = payload.action
+        rec.snoozed_until = None
+        message = f"Marked as {payload.action.replace('_', ' ')}."
     rec.updated_at = datetime.utcnow()
     db.commit()
-    return {"message": f"Marked as {payload.action.replace('_', ' ')}."}
+    return {"message": message, **{k: v for k, v in _serialize_rec(rec).items()
+                                   if k in ("status", "snoozed_until")}}
 
 
 @router.get("/consent")

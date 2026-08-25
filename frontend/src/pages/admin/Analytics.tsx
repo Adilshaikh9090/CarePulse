@@ -46,7 +46,7 @@ export default function Analytics() {
               subtitle="Accounts by access level">
           <ul className="space-y-2">
             {Object.entries(o.users.by_role).map(([role, n]) => (
-              <li key={role} className="flex items-center justify-between rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/5">
+              <li key={role} className="flex items-center justify-between rounded-xl bg-subtle px-3 py-2.5 ring-1 ring-line">
                 <span className="text-sm capitalize text-slate-300">{role.replace('_', ' ')}</span>
                 <Badge>{n as number}</Badge>
               </li>
