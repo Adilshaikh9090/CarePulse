@@ -52,7 +52,7 @@ export default function ChatAssistant() {
       </button>
 
       {open && (
-        <div className="fixed bottom-20 right-5 z-40 flex h-[440px] w-[min(92vw,360px)] glass flex-col overflow-hidden rounded-2xl shadow-2xl ring-1 ring-linestrong">
+        <div className="fixed bottom-36 right-5 z-40 flex h-[min(440px,calc(100vh-180px))] w-[min(92vw,360px)] glass flex-col overflow-hidden rounded-2xl shadow-2xl ring-1 ring-linestrong">
           <header className="flex items-center gap-2 border-b border-line px-4 py-3">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300"><Bot size={15} /></span>
             <div>

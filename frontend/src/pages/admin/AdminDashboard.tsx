@@ -33,13 +33,13 @@ export default function AdminDashboard() {
                   tone="emerald" icon={<HeartPulse size={15} />} sub="support in progress" />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <Card className="lg:col-span-2" title="Current risk distribution"
+      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card className="md:col-span-2 lg:col-span-2" title="Current risk distribution"
               subtitle="Latest indicator per personnel member">
           <RiskPie counts={o.current_risk_distribution} />
         </Card>
 
-        <Card className="lg:col-span-3" title="Unit wellbeing comparison"
+        <Card className="md:col-span-2 lg:col-span-3" title="Unit wellbeing comparison"
               subtitle="Average workload / fatigue / sleep (indexed 0–100)">
           {units.data?.units?.length
             ? <UnitBarsChart units={units.data.units} />

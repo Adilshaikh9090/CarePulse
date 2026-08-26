@@ -47,8 +47,8 @@ export default function PersonnelDashboard() {
           </div>
         </Card>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-5">
-          <Card delay={0} className="lg:col-span-2" title="Current welfare-risk indicator" subtitle={pred.timestamp ? `Updated ${fmtDate(pred.timestamp)}` : undefined}>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <Card delay={0} className="md:col-span-2 lg:col-span-2" title="Current welfare-risk indicator" subtitle={pred.timestamp ? `Updated ${fmtDate(pred.timestamp)}` : undefined}>
             <div className="flex items-center gap-4">
               <GaugeRing score={pred.risk_score} level={pred.risk_level} />
               <div className="space-y-2 text-sm">
@@ -65,7 +65,7 @@ export default function PersonnelDashboard() {
             </div>
           </Card>
 
-          <Card delay={0.08} className="lg:col-span-3" title="What the model noticed" subtitle="Top contributing factors right now">
+          <Card delay={0.08} className="md:col-span-2 lg:col-span-3" title="What the model noticed" subtitle="Top contributing factors right now">
             {pred.sub_scores && (
               <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {([['Stress', pred.sub_scores.stress, Activity],
@@ -101,8 +101,8 @@ export default function PersonnelDashboard() {
         </div>
       )}
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <Card delay={0.16} className="lg:col-span-3"
+      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card delay={0.16} className="md:col-span-2 lg:col-span-3"
               title="30-day wellbeing trends"
               subtitle="Stress index vs fatigue, workload and sleep quality"
               action={<Link to="/app/checkin"><Button variant="subtle" size="sm">New check-in</Button></Link>}>
@@ -112,7 +112,7 @@ export default function PersonnelDashboard() {
             <Empty icon={<TrendingUp size={24} />} title="Not enough data yet" hint="Charts appear after a few days of check-ins." />}
         </Card>
 
-        <Card delay={0.24} className="lg:col-span-2" title="Pending recommendations"
+        <Card delay={0.24} className="md:col-span-2 lg:col-span-2" title="Pending recommendations"
               action={<Link to="/app/recommendations"><Button variant="ghost" size="sm">All</Button></Link>}>
           {recs.data?.items?.length ? (
             <ul className="space-y-2">

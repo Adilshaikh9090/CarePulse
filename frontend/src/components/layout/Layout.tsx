@@ -251,7 +251,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 py-6 lg:px-8 lg:pb-6">
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 sm:pt-6 lg:px-8 lg:pb-6">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -300,14 +300,14 @@ function MobileBottomNav({ isAdminArea }: { isAdminArea: boolean }) {
         { to: '/app/settings', label: 'Profile', icon: Settings },
       ]
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-line bg-navy-900/95 backdrop-blur lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-30 flex border-t border-line bg-navy-900/95 backdrop-blur safe-bottom lg:hidden">
       {items.map(({ to, label, icon: Icon }) => (
         <NavLink key={to} to={to} end={to === '/app' || to === '/admin'}
                  className={({ isActive }) =>
-                   `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[9px] font-medium transition-colors ${
+                   `flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium transition-colors min-h-[52px] ${
                      isActive ? 'text-sky-300' : 'text-slate-500 hover:text-slate-300'}`}>
-          <Icon size={18} />
-          {label}
+          <Icon size={20} strokeWidth={2} />
+          <span className="mt-0.5">{label}</span>
         </NavLink>
       ))}
     </nav>

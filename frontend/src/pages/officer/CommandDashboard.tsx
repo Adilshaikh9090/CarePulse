@@ -75,8 +75,8 @@ export default function CommandDashboard() {
         </Card>
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <Card delay={0.24} className="lg:col-span-2" title="Risk distribution" subtitle="Latest indicator per personnel member">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card delay={0.24} className="md:col-span-2 lg:col-span-2" title="Risk distribution" subtitle="Latest indicator per personnel member">
           <ul className="space-y-3">
             {LEVELS.map((lv) => {
               const n = d.risk_counts[lv] || 0
@@ -95,7 +95,7 @@ export default function CommandDashboard() {
           </ul>
         </Card>
 
-        <Card delay={0.3} className="lg:col-span-3" title="Weekly stress index" subtitle="Average across all check-ins (last 14 weeks)">
+        <Card delay={0.3} className="md:col-span-2 lg:col-span-3" title="Weekly stress index" subtitle="Average across all check-ins (last 14 weeks)">
           {d.weekly_stress.length ? (
             <MiniBars data={d.weekly_stress.map((w) => ({ label: w.week, value: w.value }))} />
           ) : (
@@ -125,7 +125,7 @@ export default function CommandDashboard() {
               subtitle="Anonymized counts per unit"
               action={<Users size={15} className="text-sky-400/80" />}>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full min-w-[480px] text-left text-xs">
               <thead>
                 <tr className="border-b border-line text-[10px] uppercase tracking-wide text-slate-500">
                   <th className="py-2 pr-3">Unit</th>

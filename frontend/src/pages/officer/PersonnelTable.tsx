@@ -85,61 +85,103 @@ export default function PersonnelTable() {
             <Empty icon={<UserSearch size={24} />} title="No matching personnel"
                    hint="Try widening the filters." />
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-xs">
-                <thead>
-                  <tr className="border-b border-line text-[10px] uppercase tracking-wide text-slate-500">
-                    <th className="py-2.5 pr-3">Person</th>
-                    <th className="px-2 py-2.5">Unit</th>
-                    <th className="px-2 py-2.5">Indicator</th>
-                    <th className="px-2 py-2.5 text-center">Stress</th>
-                    <th className="px-2 py-2.5 text-center">Burnout</th>
-                    <th className="px-2 py-2.5 text-center">Fatigue</th>
-                    <th className="px-2 py-2.5">Last check-in</th>
-                    <th className="px-2 py-2.5">Deployment</th>
-                    <th className="px-2 py-2.5">Follow-up</th>
-                    <th className="px-2 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.data.items.map((r) => (
-                    <tr key={r.user_id ?? r.anon_id}
-                        className="border-b border-line/60 transition-colors last:border-0 hover:bg-hoverc/50">
-                      <td className="py-3 pr-3">
-                        <p className="font-mono text-[11px] font-semibold text-slate-100">{r.display_name || r.anon_id}</p>
-                        {r.personnel_id && r.display_name && (
-                          <p className="font-mono text-[10px] text-slate-500">{r.personnel_id}</p>
-                        )}
-                      </td>
-                      <td className="px-2 py-3 text-slate-300">{r.unit}</td>
-                      <td className="px-2 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${riskBadge(r.risk_level)}`}>
-                          {r.risk_level}
-                        </span>
-                      </td>
-                      <td className="px-2 py-3 text-center">{subCell(r.stress_score)}</td>
-                      <td className="px-2 py-3 text-center">{subCell(r.burnout_score)}</td>
-                      <td className="px-2 py-3 text-center">{subCell(r.fatigue_score)}</td>
-                      <td className="px-2 py-3 text-slate-400">{fmtDate(r.last_checkin)}</td>
-                      <td className="px-2 py-3 text-slate-400">{r.deployment_status || '—'}</td>
-                      <td className="px-2 py-3">
-                        <span className={
-                          r.follow_up_status === 'overdue' ? 'font-semibold text-fuchsia-300'
-                            : r.follow_up_status !== 'none' ? 'text-amber-300' : 'text-slate-600'}>
-                          {FOLLOWUP_LABEL[r.follow_up_status] || r.follow_up_status}
-                        </span>
-                      </td>
-                      <td className="px-2 py-3 text-right">
-                        <Link to={`/officer/personnel/${r.user_id}`}
-                              className="inline-flex items-center gap-1 rounded-lg bg-subtle px-2.5 py-1.5 text-[11px] font-medium text-sky-300 ring-1 ring-line transition hover:bg-hoverc hover:text-sky-200">
-                          <Eye size={12} /> Detail
-                        </Link>
-                      </td>
+            <>
+              {/* Mobile card layout */}
+              <div className="mt-4 space-y-3 md:hidden">
+                {table.data.items.map((r) => (
+                  <Link key={r.user_id ?? r.anon_id}
+                        to={`/officer/personnel/${r.user_id}`}
+                        className="block rounded-xl bg-subtle p-3.5 ring-1 ring-line transition hover:ring-linestrong">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-mono text-xs font-semibold text-slate-100 truncate">{r.display_name || r.anon_id}</p>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${riskBadge(r.risk_level)}`}>
+                        {r.risk_level}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[10px] text-slate-500">{r.unit}{r.personnel_id ? ` · ${r.personnel_id}` : ''}</p>
+                    <div className="mt-2.5 grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-navy-950/40 px-2 py-1.5 text-center">
+                        <p className="text-[9px] uppercase text-slate-500">Stress</p>
+                        {subCell(r.stress_score)}
+                      </div>
+                      <div className="rounded-lg bg-navy-950/40 px-2 py-1.5 text-center">
+                        <p className="text-[9px] uppercase text-slate-500">Burnout</p>
+                        {subCell(r.burnout_score)}
+                      </div>
+                      <div className="rounded-lg bg-navy-950/40 px-2 py-1.5 text-center">
+                        <p className="text-[9px] uppercase text-slate-500">Fatigue</p>
+                        {subCell(r.fatigue_score)}
+                      </div>
+                    </div>
+                    <div className="mt-2.5 flex items-center justify-between text-[10px] text-slate-500">
+                      <span>Check-in: {fmtDate(r.last_checkin)}</span>
+                      <span className={
+                        r.follow_up_status === 'overdue' ? 'font-semibold text-fuchsia-300'
+                          : r.follow_up_status !== 'none' ? 'text-amber-300' : 'text-slate-600'}>
+                        {FOLLOWUP_LABEL[r.follow_up_status] || r.follow_up_status}
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Desktop table layout */}
+              <div className="mt-4 hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[860px] text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-line text-[10px] uppercase tracking-wide text-slate-500">
+                      <th className="py-2.5 pr-3">Person</th>
+                      <th className="px-2 py-2.5">Unit</th>
+                      <th className="px-2 py-2.5">Indicator</th>
+                      <th className="px-2 py-2.5 text-center">Stress</th>
+                      <th className="px-2 py-2.5 text-center">Burnout</th>
+                      <th className="px-2 py-2.5 text-center">Fatigue</th>
+                      <th className="px-2 py-2.5">Last check-in</th>
+                      <th className="px-2 py-2.5">Deployment</th>
+                      <th className="px-2 py-2.5">Follow-up</th>
+                      <th className="px-2 py-2.5" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {table.data.items.map((r) => (
+                      <tr key={r.user_id ?? r.anon_id}
+                          className="border-b border-line/60 transition-colors last:border-0 hover:bg-hoverc/50">
+                        <td className="py-3 pr-3">
+                          <p className="font-mono text-[11px] font-semibold text-slate-100">{r.display_name || r.anon_id}</p>
+                          {r.personnel_id && r.display_name && (
+                            <p className="font-mono text-[10px] text-slate-500">{r.personnel_id}</p>
+                          )}
+                        </td>
+                        <td className="px-2 py-3 text-slate-300">{r.unit}</td>
+                        <td className="px-2 py-3">
+                          <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${riskBadge(r.risk_level)}`}>
+                            {r.risk_level}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-center">{subCell(r.stress_score)}</td>
+                        <td className="px-2 py-3 text-center">{subCell(r.burnout_score)}</td>
+                        <td className="px-2 py-3 text-center">{subCell(r.fatigue_score)}</td>
+                        <td className="px-2 py-3 text-slate-400">{fmtDate(r.last_checkin)}</td>
+                        <td className="px-2 py-3 text-slate-400">{r.deployment_status || '—'}</td>
+                        <td className="px-2 py-3">
+                          <span className={
+                            r.follow_up_status === 'overdue' ? 'font-semibold text-fuchsia-300'
+                              : r.follow_up_status !== 'none' ? 'text-amber-300' : 'text-slate-600'}>
+                            {FOLLOWUP_LABEL[r.follow_up_status] || r.follow_up_status}
+                          </span>
+                        </td>
+                        <td className="px-2 py-3 text-right">
+                          <Link to={`/officer/personnel/${r.user_id}`}
+                                className="inline-flex items-center gap-1 rounded-lg bg-subtle px-2.5 py-1.5 text-[11px] font-medium text-sky-300 ring-1 ring-line transition hover:bg-hoverc hover:text-sky-200">
+                            <Eye size={12} /> Detail
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
       </Card>
 
