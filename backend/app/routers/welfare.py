@@ -236,8 +236,8 @@ def report_list(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
                        "created_at": r.created_at.date().isoformat()} for r in rows]}
 
 
-@cached(ttl=30)
 @router.get("/reports/overview")
+@cached(ttl=60)
 def report_overview(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
     total_personnel = db.query(func.count(User.id)).filter(User.role == "personnel").scalar()
 

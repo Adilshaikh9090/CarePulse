@@ -51,8 +51,8 @@ def analytics_overview(days: int = 30, user: User = Depends(ADMIN),
     }
 
 
-@cached(ttl=60)
 @router.get("/analytics/risk-distribution")
+@cached(ttl=60)
 def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)):
     latest_sq = (db.query(RiskPrediction.user_id,
                           func.max(RiskPrediction.created_at).label("mx"))
@@ -68,8 +68,8 @@ def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)
             "Low": dist.get("Low", 0)}
 
 
-@cached(ttl=60)
 @router.get("/analytics/units")
+@cached(ttl=60)
 def unit_stats(user: User = Depends(require_roles("administrator", "welfare_officer")),
                db: Session = Depends(get_db)):
     units = db.query(Unit).order_by(Unit.name.asc()).all()

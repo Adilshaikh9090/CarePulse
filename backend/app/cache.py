@@ -1,4 +1,5 @@
 import time
+import functools
 from typing import Any, Callable
 
 _cache: dict[str, tuple[float, Any]] = {}
@@ -7,6 +8,7 @@ DEFAULT_TTL = 30
 
 def cached(ttl: int = DEFAULT_TTL):
     def decorator(fn: Callable) -> Callable:
+        @functools.wraps(fn)
         def wrapper(*args, **kwargs):
             key = fn.__qualname__
             now = time.monotonic()
@@ -17,7 +19,6 @@ def cached(ttl: int = DEFAULT_TTL):
             result = fn(*args, **kwargs)
             _cache[key] = (now + ttl, result)
             return result
-        wrapper.__name__ = fn.__name__
         return wrapper
     return decorator
 
