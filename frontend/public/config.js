@@ -1,1 +1,1 @@
-﻿window.__CP_API_URL__ = 'https://carepulse-66bx.onrender.com';
+﻿window.__CP_API_URL__ = 'http://localhost:8000';

@@ -1,27 +1,18 @@
 import time
-import functools
-from typing import Any, Callable
 
-_cache: dict[str, tuple[float, Any]] = {}
-DEFAULT_TTL = 30
+_store: dict[str, tuple[float, object]] = {}
 
 
-def cached(ttl: int = DEFAULT_TTL):
-    def decorator(fn: Callable) -> Callable:
-        @functools.wraps(fn)
-        def wrapper(*args, **kwargs):
-            key = fn.__qualname__
-            now = time.monotonic()
-            if key in _cache:
-                expires, val = _cache[key]
-                if now < expires:
-                    return val
-            result = fn(*args, **kwargs)
-            _cache[key] = (now + ttl, result)
-            return result
-        return wrapper
-    return decorator
+def get_cache(key: str, ttl: int = 60) -> object | None:
+    entry = _store.get(key)
+    if entry and time.monotonic() < entry[0]:
+        return entry[1]
+    return None
+
+
+def set_cache(key: str, value: object, ttl: int = 60) -> None:
+    _store[key] = (time.monotonic() + ttl, value)
 
 
 def invalidate():
-    _cache.clear()
+    _store.clear()

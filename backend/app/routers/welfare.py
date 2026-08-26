@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
-from ..cache import cached
+from ..cache import get_cache, set_cache
 from ..database import get_db
 from ..models import (Alert, AuditLog, DeploymentRecord, DutyRecord, Intervention, LeaveRecord,
                       Notification, Report, RiskPrediction, Unit, User,
@@ -237,8 +237,10 @@ def report_list(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
 
 
 @router.get("/reports/overview")
-@cached(ttl=60)
 def report_overview(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
+    cached = get_cache("report_overview")
+    if cached is not None:
+        return cached
     total_personnel = db.query(func.count(User.id)).filter(User.role == "personnel").scalar()
 
     latest_sq = (db.query(RiskPrediction.user_id,
@@ -258,7 +260,7 @@ def report_overview(user: User = Depends(OFFICER), db: Session = Depends(get_db)
     recs_pending = db.query(func.count(WelfareRecommendation.id)).filter(
         WelfareRecommendation.status == "pending").scalar()
 
-    return {
+    result = {
         "total_personnel": total_personnel,
         "current_risk_distribution": {"High": current.get("High", 0),
                                       "Moderate": current.get("Moderate", 0),
@@ -269,6 +271,8 @@ def report_overview(user: User = Depends(OFFICER), db: Session = Depends(get_db)
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "note": "Aggregated, anonymized statistics only — no individual data is exposed.",
     }
+    set_cache("report_overview", result)
+    return result
 
 
 # ---------------- audit ----------------

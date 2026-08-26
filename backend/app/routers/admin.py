@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..cache import cached
+from ..cache import get_cache, set_cache
 from ..database import get_db
 from ..models import (Alert, AuditLog, ConsentPreferences, Intervention, Notification,
                       Report, RiskPrediction, Unit, User, WellbeingAssessment)
@@ -52,8 +52,10 @@ def analytics_overview(days: int = 30, user: User = Depends(ADMIN),
 
 
 @router.get("/analytics/risk-distribution")
-@cached(ttl=60)
 def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)):
+    cached = get_cache("risk_distribution")
+    if cached is not None:
+        return cached
     latest_sq = (db.query(RiskPrediction.user_id,
                           func.max(RiskPrediction.created_at).label("mx"))
                  .group_by(RiskPrediction.user_id).subquery())
@@ -64,14 +66,18 @@ def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)
             .filter(User.role == "personnel")
             .group_by(RiskPrediction.risk_level).all())
     dist = {r[0]: int(r[1]) for r in rows}
-    return {"High": dist.get("High", 0), "Moderate": dist.get("Moderate", 0),
+    result = {"High": dist.get("High", 0), "Moderate": dist.get("Moderate", 0),
             "Low": dist.get("Low", 0)}
+    set_cache("risk_distribution", result)
+    return result
 
 
 @router.get("/analytics/units")
-@cached(ttl=60)
 def unit_stats(user: User = Depends(require_roles("administrator", "welfare_officer")),
                db: Session = Depends(get_db)):
+    cached = get_cache("unit_stats")
+    if cached is not None:
+        return cached
     units = db.query(Unit).order_by(Unit.name.asc()).all()
     unit_ids = [u.id for u in units]
     unit_map = {u.id: {"id": u.id, "name": u.name, "code": u.code, "location": u.location,
@@ -107,7 +113,9 @@ def unit_stats(user: User = Depends(require_roles("administrator", "welfare_offi
         if uid in unit_map:
             unit_map[uid]["avg_workload"] = round(float(avg or 0), 2)
 
-    return {"units": [unit_map[uid] for uid in sorted(unit_map)]}
+    result = {"units": [unit_map[uid] for uid in sorted(unit_map)]}
+    set_cache("unit_stats", result)
+    return result
 
 
 # ---------------- user management ----------------
