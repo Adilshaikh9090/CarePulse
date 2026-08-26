@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from sqlalchemy import String, Integer, Float, Boolean, Date, DateTime, ForeignKey, Text, JSON
+from sqlalchemy import String, Integer, Float, Boolean, Date, DateTime, ForeignKey, Text, JSON, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -7,6 +7,7 @@ from ..database import Base
 
 class WellbeingAssessment(Base):
     __tablename__ = "wellbeing_assessments"
+    __table_args__ = (Index("ix_wa_user_date", "user_id", "entry_date"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     entry_date: Mapped[date] = mapped_column(Date, index=True)
@@ -26,6 +27,7 @@ class WellbeingAssessment(Base):
 
 class RiskPrediction(Base):
     __tablename__ = "risk_predictions"
+    __table_args__ = (Index("ix_rp_user_created", "user_id", "created_at"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)

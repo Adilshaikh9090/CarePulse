@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
+from ..cache import cached
 from ..database import get_db
 from ..models import (Alert, AuditLog, DeploymentRecord, DutyRecord, Intervention, LeaveRecord,
                       Notification, Report, RiskPrediction, Unit, User,
@@ -235,6 +236,7 @@ def report_list(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
                        "created_at": r.created_at.date().isoformat()} for r in rows]}
 
 
+@cached(ttl=30)
 @router.get("/reports/overview")
 def report_overview(user: User = Depends(OFFICER), db: Session = Depends(get_db)):
     total_personnel = db.query(func.count(User.id)).filter(User.role == "personnel").scalar()

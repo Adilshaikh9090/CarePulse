@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from ..cache import cached
 from ..database import get_db
 from ..models import (Alert, AuditLog, ConsentPreferences, Intervention, Notification,
                       Report, RiskPrediction, Unit, User, WellbeingAssessment)
@@ -50,6 +51,7 @@ def analytics_overview(days: int = 30, user: User = Depends(ADMIN),
     }
 
 
+@cached(ttl=60)
 @router.get("/analytics/risk-distribution")
 def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)):
     latest_sq = (db.query(RiskPrediction.user_id,
@@ -66,34 +68,46 @@ def risk_distribution(user: User = Depends(ADMIN), db: Session = Depends(get_db)
             "Low": dist.get("Low", 0)}
 
 
+@cached(ttl=60)
 @router.get("/analytics/units")
 def unit_stats(user: User = Depends(require_roles("administrator", "welfare_officer")),
                db: Session = Depends(get_db)):
     units = db.query(Unit).order_by(Unit.name.asc()).all()
-    out = []
-    for u in units:
-        members = db.query(func.count(User.id)).filter(
-            User.unit_id == u.id, User.role == "personnel").scalar()
-        latest_sq = (db.query(RiskPrediction.user_id,
-                              func.max(RiskPrediction.created_at).label("mx"))
-                     .filter(RiskPrediction.user_id.in_(
-                         db.query(User.id).filter(User.unit_id == u.id)))
-                     .group_by(RiskPrediction.user_id).subquery())
-        high = (db.query(func.count())
-                .select_from(RiskPrediction)
-                .join(latest_sq, (latest_sq.c.user_id == RiskPrediction.user_id) &
-                                 (latest_sq.c.mx == RiskPrediction.created_at))
-                .filter(RiskPrediction.risk_level == "High").scalar())
-        avg_wl = (db.query(func.avg(WellbeingAssessment.workload))
+    unit_ids = [u.id for u in units]
+    unit_map = {u.id: {"id": u.id, "name": u.name, "code": u.code, "location": u.location,
+                       "strength": 0, "high_risk": 0, "avg_workload": 0.0} for u in units}
+
+    member_counts = dict(db.query(User.unit_id, func.count(User.id))
+                        .filter(User.unit_id.in_(unit_ids), User.role == "personnel")
+                        .group_by(User.unit_id).all())
+    for uid, cnt in member_counts.items():
+        if uid in unit_map:
+            unit_map[uid]["strength"] = int(cnt)
+
+    latest_sq = (db.query(RiskPrediction.user_id, func.max(RiskPrediction.created_at).label("mx"))
+                 .group_by(RiskPrediction.user_id).subquery())
+    high_counts = (db.query(User.unit_id, func.count())
+                   .select_from(RiskPrediction)
+                   .join(latest_sq, (latest_sq.c.user_id == RiskPrediction.user_id) &
+                                    (latest_sq.c.mx == RiskPrediction.created_at))
+                   .join(User, User.id == RiskPrediction.user_id)
+                   .filter(RiskPrediction.risk_level == "High", User.unit_id.in_(unit_ids))
+                   .group_by(User.unit_id).all())
+    for uid, cnt in high_counts:
+        if uid in unit_map:
+            unit_map[uid]["high_risk"] = int(cnt)
+
+    thirty_days_ago = date.today() - timedelta(days=30)
+    avg_wl = dict(db.query(User.unit_id, func.avg(WellbeingAssessment.workload))
                   .join(User, User.id == WellbeingAssessment.user_id)
-                  .filter(User.unit_id == u.id,
-                          WellbeingAssessment.entry_date >= date.today() - timedelta(days=30))
-                  .scalar())
-        out.append({"id": u.id, "name": u.name, "code": u.code, "location": u.location,
-                    "strength": members,
-                    "high_risk": int(high or 0),
-                    "avg_workload": round(float(avg_wl or 0), 2)})
-    return {"units": out}
+                  .filter(User.unit_id.in_(unit_ids),
+                          WellbeingAssessment.entry_date >= thirty_days_ago)
+                  .group_by(User.unit_id).all())
+    for uid, avg in avg_wl.items():
+        if uid in unit_map:
+            unit_map[uid]["avg_workload"] = round(float(avg or 0), 2)
+
+    return {"units": [unit_map[uid] for uid in sorted(unit_map)]}
 
 
 # ---------------- user management ----------------
