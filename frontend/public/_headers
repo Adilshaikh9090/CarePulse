@@ -1,0 +1,4 @@
+﻿/.netlify/scripts/*
+  X-Robots-Tag: noindex
+  Cache-Control: no-store
+  Content-Security-Policy: script-src 'none'

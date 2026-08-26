@@ -9,10 +9,7 @@ import { FormField, GradientButton, PasswordField } from '../components/form'
 import AuthLayout from '../components/layout/AuthLayout'
 
 const DEMOS = [
-  { id: 'CPF-1501', role: 'Personnel — Demo soldier' },
-  { id: 'WELFARE-01', role: 'Welfare Officer — Meera Krishnan' },
-  { id: 'CMDR-01', role: 'Commander — Col. R. Iyer' },
-  { id: 'ADMIN-01', role: 'Administrator — Vikram Desai' },
+  { id: 'ADMIN-01', role: 'Administrator — Full access demo' },
 ]
 
 const stagger = {

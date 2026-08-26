@@ -46,17 +46,8 @@ def seed(force: bool = False) -> bool:
                         email=f"{pid.lower()}@demo.example",
                         phone=f"+91 9000{random.randint(100000, 999999)}")
 
-        admin = mk("ADMIN-01", "Vikram Desai", "administrator", None, "System Administrator", date(2016, 3, 14))
-        chief = mk("WELFARE-01", "Meera Krishnan", "welfare_officer", units[0], "Chief Welfare Officer", date(2017, 8, 2))
-        officers = [chief]
-        officer_names = ["Arjun Mehta", "Priya Nair", "Rohan Iyer", "Kavya Reddy", "Sanjay Gupta"]
-        for idx, nm in enumerate(officer_names):
-            officers.append(mk(f"WELFARE-{idx + 2:02d}", nm, "welfare_officer", units[idx],
-                               "Welfare Officer", date(2018 + idx % 3, 1 + idx, 15)))
-
-        demo = mk(DEMO_PERSONNEL_ID, "Aarav Sharma", "personnel", units[0],
-                  "Field Operations Officer", date(2019, 6, 17))
-        db.add_all([admin, demo] + officers)
+        admin = mk("ADMIN-01", "Vikram Desai", "administrator", units[0], "System Administrator", date(2016, 3, 14))
+        db.add(admin)
 
         people = [dict(p) for p in generate_personnel(SEED_USERS - 1, units)]
         for p in people:
@@ -67,10 +58,6 @@ def seed(force: bool = False) -> bool:
         db.commit()
 
         id_to_person = {p["_user"].id: p for p in people}
-        demo_profile = {"personnel_id": DEMO_PERSONNEL_ID,
-                        "baseline": {"wl": 2.9, "ft": 2.6, "slp": 3.1, "sat": 3.3,
-                                     "duty": 9.3, "ot": 0.45, "trend": 0.0}}
-        db.commit()
 
         for u in units:
             u.strength = db.query(func.count(User.id)).filter(
@@ -81,9 +68,8 @@ def seed(force: bool = False) -> bool:
         engine = get_engine()
         all_rows: list[dict] = []
         history_by_user: dict[int, dict[int, dict]] = {}
-        profiles = [(demo, demo_profile["personnel_id"] == DEMO_PERSONNEL_ID)] + \
-                   [(p["_user"], False) for p in people]
-        profile_map = {demo.id: demo_profile} | {p["_user"].id: p for p in people}
+        profiles = [(p["_user"], False) for p in people]
+        profile_map = {p["_user"].id: p for p in people}
 
         for user, is_demo in profiles:
             prof = profile_map[user.id]
@@ -178,10 +164,10 @@ def seed(force: bool = False) -> bool:
                                 status="open"))
             seq += 1
 
-        dl = latest_by_user[demo.id]
+        dl = latest_by_user[people[0]["_user"].id]
         alerts.append(Alert(code=f"EW-{seq:04d}", scope="individual", unit_id=units[0].id,
-                            subject_user_id=demo.id,
-                            title=f"Rising workload & fatigue trend — {DEMO_PERSONNEL_ID}",
+                            subject_user_id=people[0]["_user"].id,
+                            title=f"Rising workload & fatigue trend — {people[0]['personnel_id']}",
                             severity="moderate", detected_at=now - timedelta(hours=3),
                             factors=[f["name"] for f in dl[0]["top_factors"]],
                             recommendation="Review workload distribution and offer optional welfare consultation.",
@@ -198,25 +184,24 @@ def seed(force: bool = False) -> bool:
         ivs = []
         for ai_, a in enumerate(alerts):
             ivs.append(Intervention(alert_id=a.id, subject_user_id=a.subject_user_id, unit_id=a.unit_id,
-                                    subject_label=(id_to_person[a.subject_user_id]["personnel_id"]
-                                                   if a.subject_user_id in id_to_person
-                                                   else next((u.name for u in units if u.id == a.unit_id), "—")),
-                                    risk_level=a.severity.capitalize(),
-                                    action=a.recommendation if a.scope == "individual" else actions[ai_ % len(actions)],
-                                    assigned_officer_id=officers[ai_ % len(officers)].id,
-                                    officer_name=officers[ai_ % len(officers)].full_name,
-                                    created_at=a.detected_at,
-                                    due_date=today + timedelta(days=random.randint(2, 12)),
-                                    status=statuses[(ai_ * 3) % 4], notes=""))
+                                     subject_label=(id_to_person[a.subject_user_id]["personnel_id"]
+                                                    if a.subject_user_id in id_to_person
+                                                    else next((u.name for u in units if u.id == a.unit_id), "—")),
+                                     risk_level=a.severity.capitalize(),
+                                     action=a.recommendation if a.scope == "individual" else actions[ai_ % len(actions)],
+                                     assigned_officer_id=admin.id,
+                                     officer_name=admin.full_name,
+                                     created_at=a.detected_at,
+                                     due_date=today + timedelta(days=random.randint(2, 12)),
+                                     status=statuses[(ai_ * 3) % 4], notes=""))
         while len(ivs) < 40:
             k = len(ivs)
             p = random.choice(people)
-            off = random.choice(officers)
             ivs.append(Intervention(subject_user_id=None, unit_id=p["unit"].id, alert_id=None,
-                                    subject_label=p["unit"].name,
-                                    risk_level=random.choice(["Low", "Moderate"]),
-                                    action=actions[k % len(actions)],
-                                    assigned_officer_id=off.id, officer_name=off.full_name,
+                                     subject_label=p["unit"].name,
+                                     risk_level=random.choice(["Low", "Moderate"]),
+                                     action=actions[k % len(actions)],
+                                     assigned_officer_id=admin.id, officer_name=admin.full_name,
                                     created_at=now - timedelta(days=random.randint(1, 25)),
                                     due_date=today + timedelta(days=random.randint(-5, 10)),
                                     status=statuses[k % 4], notes=""))
@@ -224,43 +209,28 @@ def seed(force: bool = False) -> bool:
 
         # ---- notifications ----
         db.add_all([
-            Notification(user_id=demo.id, category="welfare_reminder", title="Weekly wellbeing check-in due",
-                         body="Your weekly wellbeing check-in is due. It takes less than two minutes.",
-                         read=False, created_at=now - timedelta(hours=2)),
-            Notification(user_id=demo.id, category="trend_alert", title="Workload indicator increased",
-                         body="Your workload indicator has increased over the past two weeks. Early attention can help.",
-                         read=False, created_at=now - timedelta(hours=6)),
-            Notification(user_id=demo.id, category="support_available", title="Confidential welfare consultation available",
-                         body="A confidential welfare consultation is available if you would like to talk things through.",
-                         read=False, created_at=now - timedelta(days=1)),
-            Notification(user_id=demo.id, category="system", title="New welfare recommendations",
-                         body="Fresh personalized welfare recommendations are ready based on your latest assessment.",
-                         read=True, created_at=now - timedelta(days=2)),
-            Notification(user_id=demo.id, category="system", title="Monthly welfare overview published",
-                         body="The monthly welfare overview report is available in the Reports section.",
-                         read=True, created_at=now - timedelta(days=4)),
-            Notification(user_id=chief.id, category="trend_alert", title="New moderate-severity alert",
-                         body="An aggregated alert requires welfare review in the Early Warning Center.",
-                         read=False, created_at=now - timedelta(hours=3)),
             Notification(user_id=admin.id, category="system", title="Weekly system summary ready",
                          body="The weekly system analytics summary has been generated.",
                          read=False, created_at=now - timedelta(hours=5)),
+            Notification(user_id=admin.id, category="system", title="Monthly welfare overview published",
+                         body="The monthly welfare overview report is available in the Reports section.",
+                         read=True, created_at=now - timedelta(days=4)),
         ])
 
         # ---- consent / audit / reports ----
         consent = [{"user_id": u.id, "wellbeing_checkins": True, "optional_feedback": True,
                     "notifications_enabled": True, "updated_at": now}
-                   for u in [demo, admin, chief] + [p["_user"] for p in people]]
+                   for u in [admin] + [p["_user"] for p in people]]
         for i in range(0, len(consent), 2000):
             db.execute(ConsentPreferences.__table__.insert(), consent[i:i + 2000])
 
         audits = [
-            (now - timedelta(hours=1), chief, "Viewed aggregate alert", "EW-0001"),
-            (now - timedelta(hours=2), chief, "Updated intervention status", "Intervention #12"),
-            (now - timedelta(hours=4), admin, "Generated monthly report", "Monthly Welfare Overview"),
-            (now - timedelta(days=1), officers[1], "Assigned welfare officer", "Intervention #7"),
-            (now - timedelta(days=2), officers[2], "Closed intervention", "Intervention #22"),
-            (now - timedelta(days=3), chief, "Confirmed support needed after review", "EW-0011"),
+            (now - timedelta(hours=1), admin, "Generated monthly report", "Monthly Welfare Overview"),
+            (now - timedelta(hours=2), admin, "Viewed aggregate alert", "EW-0001"),
+            (now - timedelta(hours=4), admin, "Updated intervention status", "Intervention #12"),
+            (now - timedelta(days=1), admin, "Assigned welfare officer", "Intervention #7"),
+            (now - timedelta(days=2), admin, "Closed intervention", "Intervention #22"),
+            (now - timedelta(days=3), admin, "Confirmed support needed after review", "EW-0011"),
         ]
         for ts, actor, action, resource in audits:
             db.add(AuditLog(timestamp=ts, actor_id=actor.id, actor_name=actor.full_name,
@@ -305,14 +275,6 @@ def ensure_v2_seed() -> None:
         now = datetime.utcnow()
         today = date.today()
         pw_hash, salt = hash_password("demo1234")
-
-        # commander account
-        if not db.query(User).filter(User.personnel_id == "CMDR-01").first():
-            db.add(User(personnel_id="CMDR-01", password_hash=pw_hash, salt=salt,
-                        full_name="Colonel R. Iyer", role="commander", unit=None,
-                        designation="Formation Commander", joining_date=date(2008, 4, 10),
-                        email="cmdr01@demo.example", phone="+91 9000111000"))
-            db.commit()
 
         people = db.query(User).filter(User.role == "personnel").all()
 
