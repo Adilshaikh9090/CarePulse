@@ -1,4 +1,6 @@
-const API_BASE = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL || ''
+declare global { interface Window { __CP_API_URL__?: string } }
+const RUNTIME_URL = typeof window !== 'undefined' ? window.__CP_API_URL__ : undefined
+const API_BASE = RUNTIME_URL || (import.meta as unknown as { env: Record<string, string> }).env?.VITE_API_URL || ''
 const TOKEN_KEY = 'carepulse_token'
 const USER_KEY = 'carepulse_user'
 
