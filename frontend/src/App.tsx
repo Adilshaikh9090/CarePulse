@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { ReactNode } from 'react'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/layout/Layout'
+import BootGate from './components/BootGate'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -54,7 +55,8 @@ export default function App() {
   const home = user?.role === 'personnel' ? '/app'
     : user?.role === 'commander' ? '/admin/command' : '/admin'
   return (
-    <Routes>
+    <BootGate>
+      <Routes>
       <Route path="/" element={user ? <Navigate to={home} replace /> : <Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Register />} />
@@ -99,6 +101,7 @@ export default function App() {
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </BootGate>
   )
 }

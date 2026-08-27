@@ -6,7 +6,6 @@ from sqlalchemy import inspect, text
 
 from .config import APP_NAME, CORS_ORIGINS
 from .database import Base, engine
-from .ml import get_engine
 from .routers import admin, ai, analytics, auth, general, personnel, privacy, welfare
 from .services.seeder import ensure_v2_seed, seed
 
@@ -64,7 +63,6 @@ async def lifespan(app: FastAPI):
     _migrate_sqlite()
     seed()
     ensure_v2_seed()
-    get_engine().load()
     yield
 
 
