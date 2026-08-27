@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Activity, BarChart3, Bell, BrainCircuit, CalendarCheck, ClipboardList,
+  Activity, BarChart3, Bell, BrainCircuit, CalendarCheck, ChevronDown, ClipboardList,
   FileBarChart2, HeartPulse, LayoutDashboard, LogOut, Menu, Radar, Settings,
   ShieldAlert, ShieldCheck, Sparkles, UserCog, Users, X,
 } from 'lucide-react'
@@ -49,11 +49,13 @@ export default function Layout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+const [drawerOpen, setDrawerOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   const [notifs, setNotifs] = useState<NotificationT[]>([])
   const [unread, setUnread] = useState(0)
   const notifRef = useRef<HTMLDivElement>(null)
+  const accountRef = useRef<HTMLDivElement>(null)
 
   const isAdminArea = location.pathname.startsWith('/admin') || location.pathname.startsWith('/officer')
   const nav = (isAdminArea
@@ -68,12 +70,13 @@ export default function Layout() {
     }).catch(() => undefined)
   }
 
-  useEffect(loadNotifs, [])
-  useEffect(() => setDrawerOpen(false), [location.pathname])
+useEffect(loadNotifs, [])
+  useEffect(() => { setDrawerOpen(false); setAccountOpen(false) }, [location.pathname])
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false)
+      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false)
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
@@ -235,16 +238,68 @@ export default function Layout() {
               </AnimatePresence>
             </div>
 
-            <div className="flex items-center gap-2.5 rounded-xl bg-subtle py-1.5 pl-1.5 pr-3 ring-1 ring-linestrong">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-[11px] font-bold text-white">
-                {user ? initials(user.full_name) : '?'}
-              </span>
-              <span className="hidden sm:block leading-tight">
-                <span className="block text-xs font-semibold text-slate-100">{user?.full_name}</span>
-                <span className="block text-[10px] uppercase tracking-wide text-slate-500">
-                  {user?.role.replace('_', ' ')} · {user?.personnel_id}
+<div className="relative" ref={accountRef}>
+              <button
+                onClick={() => setAccountOpen((v) => !v)}
+                aria-label="Account menu"
+                aria-expanded={accountOpen}
+                className="flex items-center gap-2.5 rounded-xl bg-subtle py-1.5 pl-1.5 pr-2.5 ring-1 ring-linestrong transition-colors hover:bg-hoverc hover:ring-sky-500/40"
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-[11px] font-bold text-white">
+                  {user ? initials(user.full_name) : '?'}
                 </span>
-              </span>
+                <span className="hidden sm:block leading-tight text-left">
+                  <span className="block text-xs font-semibold text-slate-100">{user?.full_name}</span>
+                  <span className="block text-[10px] uppercase tracking-wide text-slate-500">
+                    {user?.role.replace('_', ' ')} · {user?.personnel_id}
+                  </span>
+                </span>
+                <ChevronDown size={14} className={`shrink-0 text-slate-500 transition-transform ${accountOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              <AnimatePresence>
+              {accountOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  className="absolute right-0 z-50 mt-2 w-72 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl bg-navy-800 ring-1 ring-linestrong card-elevate"
+                >
+                  <div className="border-b border-line px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-sm font-bold text-white">
+                        {user ? initials(user.full_name) : '?'}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-100">{user?.full_name}</p>
+                        <p className="truncate text-xs text-slate-400">{user?.email}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="uppercase tracking-wide text-slate-500">Role</span>
+                      <span className="rounded-full bg-sky-500/10 px-2 py-0.5 font-semibold text-sky-300 ring-1 ring-sky-500/25">
+                        {user?.role.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className="uppercase tracking-wide text-slate-500">Personnel ID</span>
+                      <span className="font-semibold text-slate-300">{user?.personnel_id}</span>
+                    </div>
+                  </div>
+                  <div className="border-t border-line p-2">
+                    <button
+                      onClick={() => { signOut(); navigate('/login') }}
+                      className="flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-rose-300 transition-colors hover:bg-rose-500/10"
+                    >
+                      <LogOut size={15} /> Sign out
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+</AnimatePresence>
             </div>
           </div>
         </header>
