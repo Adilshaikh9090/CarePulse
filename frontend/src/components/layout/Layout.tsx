@@ -98,9 +98,7 @@ export default function Layout() {
         className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-line bg-navy-900 transition-transform lg:translate-x-0 ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex items-center gap-2 px-5 py-5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/30">
-            <HeartPulse size={18} />
-          </span>
+          <img src="/logo.png" alt="PersonnelAI" className="h-9 w-9 rounded-xl object-cover" />
           <div>
             <p className="text-sm font-bold tracking-tight text-slate-50">PersonnelAI</p>
             <p className="text-[10px] uppercase tracking-widest text-slate-500">Welfare Monitoring</p>
