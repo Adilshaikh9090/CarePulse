@@ -5,7 +5,6 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..ml import get_engine
 from ..models import (Alert, ConsentPreferences, Intervention, Notification, RiskFactor,
                       RiskPrediction, User, WelfareRecommendation, WellbeingAssessment)
 from ..schemas import (CheckInRequest, ChatRequest, ConsentUpdate, PasswordChange,
@@ -209,6 +208,7 @@ def submit_assessment(payload: CheckInRequest, user: User = Depends(get_current_
         "rest_breaks": payload.rest_breaks, "feeling": payload.feeling,
         "energy_level": payload.energy_level, "emotional_fatigue": payload.emotional_fatigue,
     }, prev.workload if prev else None)
+    from ..ml import get_engine
     result = get_engine().predict(features)
     pred = _persist_prediction(db, user, features, result)
     _store_support_plan(db, user, pred, result)
@@ -269,6 +269,7 @@ def prediction_history(limit: int = 12, user: User = Depends(get_current_user),
 def run_prediction(payload: PredictRequest, user: User = Depends(get_current_user),
                    db: Session = Depends(get_db)):
     features = payload.model_dump()
+    from ..ml import get_engine
     result = get_engine().predict(features)
     pred = _persist_prediction(db, user, features, result)
     _store_support_plan(db, user, pred, result)

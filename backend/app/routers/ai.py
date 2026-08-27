@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..ml import get_engine
 from ..models import RiskFactor, RiskPrediction, User
 from ..schemas import PredictRequest
 from ..security import get_current_user, require_roles
@@ -14,9 +13,14 @@ from .personnel import own_prediction
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
+def _engine():
+    from ..ml import get_engine
+    return get_engine()
+
+
 @router.get("/model-info")
 def model_info(user: User = Depends(get_current_user)):
-    eng = get_engine()
+    eng = _engine()
     return {"model_version": "rf-prototype-1.0",
             "algorithm": "RandomForestClassifier (ensemble of decision trees)",
             "trained_on": "Synthetic prototype data — 24,000 generated records",
@@ -30,7 +34,7 @@ def model_info(user: User = Depends(get_current_user)):
 
 @router.post("/predict")
 def predict(payload: PredictRequest, user: User = Depends(get_current_user)):
-    return get_engine().predict(payload.model_dump())
+    return _engine().predict(payload.model_dump())
 
 
 @router.post("/demo-predict")
@@ -40,7 +44,7 @@ def demo_predict(payload: PredictRequest, user: User = Depends(get_current_user)
     Runs the real model and rule-based support-plan builder but persists NOTHING —
     demo runs never touch risk_predictions, welfare_recommendations or alerts.
     """
-    result = get_engine().predict(payload.model_dump())
+    result = _engine().predict(payload.model_dump())
     result["plan"] = build_support_plan(result["risk_level"], result["top_factors"])
     result["is_demo"] = True
     return result
@@ -98,3 +102,4 @@ def unit_trends(days: int = 30, user: User = Depends(require_roles("welfare_offi
         "avg_fatigue": round(float(r[2] or 0), 2), "avg_sleep": round(float(r[3] or 0), 2),
         "assessments": int(r[4]),
     } for r in rows]}
+

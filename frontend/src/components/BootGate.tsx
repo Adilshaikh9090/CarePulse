@@ -62,18 +62,21 @@ export default function BootGate({ children }: { children: ReactNode }) {
 
   const readyRef = useRef(false)
   const check = useRef<number | null>(null)
+  const tick = useRef(async () => {
+    setChecked(true)
+    const ok = await pingHealth()
+    if (ok && !readyRef.current) {
+      readyRef.current = true
+      setReady(true)
+      if (check.current) clearInterval(check.current)
+    } else {
+      setAttempt((a) => (a >= MAX_ATTEMPTS ? MAX_ATTEMPTS : a + 1))
+    }
+  })
   useEffect(() => {
-    check.current = window.setInterval(async () => {
-      setChecked(true)
-      const ok = await pingHealth()
-      if (ok && !readyRef.current) {
-        readyRef.current = true
-        setReady(true)
-        if (check.current) clearInterval(check.current)
-      } else {
-        setAttempt((a) => (a >= MAX_ATTEMPTS ? MAX_ATTEMPTS : a + 1))
-      }
-    }, 3000)
+    // fire immediately so a warm backend never makes users wait
+    void tick.current()
+    check.current = window.setInterval(() => void tick.current(), 3000)
     return () => { if (check.current) clearInterval(check.current) }
   }, [])
 

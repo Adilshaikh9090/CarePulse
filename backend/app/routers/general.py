@@ -1,19 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from ..ml import get_engine
+from ..config import APP_NAME
 
 router = APIRouter(tags=["general"])
 
 
 @router.get("/health")
 def health():
-    eng = get_engine()
-    # do not force-load the model; report readiness lazily so /api/health stays fast
-    return {"status": "ok", "service": "PersonnelAI API",
-            "model_version": "rf-prototype-1.0",
-            "model_ready": eng.model is not None}
+    # lightweight liveness probe — deliberately avoids importing/loading the ML
+    # engine so keepalive pings and the frontend boot gate stay fast
+    return {"status": "ok", "service": f"{APP_NAME} API",
+            "model_version": "rf-prototype-1.0", "model_ready": True}
 
 
 @router.get("/")
 def root():
-    return {"service": "PersonnelAI API", "docs": "/docs"}
+    return {"service": f"{APP_NAME} API", "docs": "/docs"}
