@@ -51,7 +51,7 @@ export default function PersonnelDashboard() {
           <Card delay={0} className="md:col-span-2 lg:col-span-2" title="Current welfare-risk indicator" subtitle={pred.timestamp ? `Updated ${fmtDate(pred.timestamp)}` : undefined}>
             <div className="flex items-center gap-4">
               <GaugeRing score={pred.risk_score} level={pred.risk_level} />
-              <div className="space-y-2 text-sm">
+              <div className="min-w-0 flex-1 space-y-2 text-sm">
                 <span className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold ${riskBadge(pred.risk_level)}`}>
                   {pred.risk_level}
                 </span>

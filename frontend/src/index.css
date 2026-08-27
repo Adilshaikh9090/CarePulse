@@ -102,6 +102,11 @@ body {
   font-feature-settings: 'cv02', 'cv03';
 }
 
+/* never allow a sideways-scrolling page on phones (charts/legends/decor can overflow) */
+html, body, #root {
+  overflow-x: clip;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

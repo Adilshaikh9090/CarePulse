@@ -16,7 +16,7 @@ export function Card({ title, subtitle, action, children, className = '', delay 
     >
       {(title || action) && (
         <header className="flex items-start justify-between gap-4 px-5 pt-4 pb-2">
-          <div>
+          <div className="min-w-0">
             {title && <h3 className="text-sm font-semibold text-slate-100">{title}</h3>}
             {subtitle && <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>}
           </div>
@@ -176,7 +176,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       className="mb-5 flex flex-wrap items-end justify-between gap-3"
     >
-      <div>
+      <div className="min-w-0">
         <h1 className="text-xl font-bold tracking-tight text-slate-50">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
       </div>

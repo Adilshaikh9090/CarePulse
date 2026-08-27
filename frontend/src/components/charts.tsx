@@ -21,19 +21,21 @@ export function WellbeingTrendsChart({ rows }: { rows: AssessmentRow[] }) {
     sleep: r.sleep_quality * 20,
   }))
   return (
+    <div className="min-w-0">
     <ResponsiveContainer width="100%" height={240}>
       <LineChart data={data} margin={{ top: 6, right: 8, bottom: 0, left: -18 }}>
         <CartesianGrid {...grid} />
         <XAxis dataKey="date" tick={axis} tickLine={false} interval={4} />
         <YAxis domain={[0, 100]} tick={axis} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Legend wrapperStyle={{ fontSize: 10, flexWrap: 'wrap' }} />
         <Line type="monotone" dataKey="stress" name="Stress index" stroke="#f87171" strokeWidth={2} dot={false} animationDuration={1100} />
         <Line type="monotone" dataKey="fatigue" name="Fatigue" stroke="#fbbf24" strokeWidth={2} dot={false} animationDuration={1100} />
         <Line type="monotone" dataKey="workload" name="Workload" stroke="#38bdf8" strokeWidth={2} dot={false} animationDuration={1100} />
         <Line type="monotone" dataKey="sleep" name="Sleep quality" stroke="#34d399" strokeWidth={2} dot={false} animationDuration={1100} />
       </LineChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -42,7 +44,8 @@ export function RiskTrendChart({ items }: { items: { iso_date: string; risk_scor
     date: new Date(`${i.iso_date}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
     score: Math.round(i.risk_score * 100),
   }))
-  return (
+return (
+    <div className="min-w-0">
     <ResponsiveContainer width="100%" height={220}>
       <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
         <defs>
@@ -55,9 +58,10 @@ export function RiskTrendChart({ items }: { items: { iso_date: string; risk_scor
         <XAxis dataKey="date" tick={axis} tickLine={false} />
         <YAxis domain={[0, 100]} tick={axis} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [`${v}%`, 'Risk indicator']} />
-        <Area type="monotone" dataKey="score" stroke="#f87171" strokeWidth={2} fill="url(#riskGrad)" animationDuration={1200} />
+<Area type="monotone" dataKey="score" stroke="#f87171" strokeWidth={2} fill="url(#riskGrad)" animationDuration={1200} />
       </AreaChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -69,8 +73,9 @@ export function RiskPie({ counts }: { counts: Record<string, number> }) {
   ]
   const colors = ['#f87171', '#fbbf24', '#34d399']
   const total = data.reduce((s, d) => s + d.value, 0)
-  if (!total) return null
+if (!total) return null
   return (
+    <div className="min-w-0">
     <ResponsiveContainer width="100%" height={230}>
       <PieChart>
         <Pie data={data} dataKey="value" nameKey="name" innerRadius={58} outerRadius={88}
@@ -78,9 +83,10 @@ export function RiskPie({ counts }: { counts: Record<string, number> }) {
           {data.map((_, i) => <Cell key={i} fill={colors[i]} />)}
         </Pie>
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Legend wrapperStyle={{ fontSize: 11, flexWrap: 'wrap' }} />
       </PieChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -91,19 +97,21 @@ export function UnitBarsChart({ units }: { units: { unit: string; avg_workload: 
     Fatigue: +(u.avg_fatigue / 5 * 100).toFixed(1),
     Sleep: +(u.avg_sleep / 5 * 100).toFixed(1),
   }))
-  return (
+return (
+    <div className="min-w-0">
     <ResponsiveContainer width="100%" height={250}>
       <BarChart data={scale(units)} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
         <CartesianGrid {...grid} />
         <XAxis dataKey="unit" tick={axis} tickLine={false} />
         <YAxis domain={[0, 100]} tick={axis} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Legend wrapperStyle={{ fontSize: 11, flexWrap: 'wrap' }} />
         <Bar dataKey="Workload" fill="#38bdf8" radius={[6, 6, 0, 0]} maxBarSize={26} animationDuration={900} />
         <Bar dataKey="Fatigue" fill="#fbbf24" radius={[6, 6, 0, 0]} maxBarSize={26} animationDuration={900} />
         <Bar dataKey="Sleep" fill="#34d399" radius={[6, 6, 0, 0]} maxBarSize={26} animationDuration={900} />
       </BarChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 
@@ -113,18 +121,20 @@ export function ActivityAreaChart({ daily }: { daily: { date: string; checkins: 
     Checkins: d.checkins,
     StressIndex: d.stress_index,
   }))
-  return (
+return (
+    <div className="min-w-0">
     <ResponsiveContainer width="100%" height={230}>
       <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
         <CartesianGrid {...grid} />
         <XAxis dataKey="date" tick={axis} tickLine={false} interval={Math.max(Math.floor(data.length / 8), 0)} />
         <YAxis tick={axis} tickLine={false} />
         <Tooltip contentStyle={tooltipStyle} />
-        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Legend wrapperStyle={{ fontSize: 11, flexWrap: 'wrap' }} />
         <Area type="monotone" dataKey="Checkins" stroke="#38bdf8" fill="#38bdf822" strokeWidth={2} />
         <Area type="monotone" dataKey="StressIndex" stroke="#f87171" fill="#f8717122" strokeWidth={2} />
       </AreaChart>
     </ResponsiveContainer>
+    </div>
   )
 }
 

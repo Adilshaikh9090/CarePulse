@@ -249,7 +249,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 sm:pt-6 lg:px-8 lg:pb-6">
+        <main className="mx-auto w-full min-w-0 max-w-6xl flex-1 px-4 pt-4 pb-24 sm:pt-6 lg:px-8 lg:pb-6">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
@@ -257,6 +257,7 @@ export default function Layout() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full min-w-0"
             >
               <Outlet />
             </motion.div>
