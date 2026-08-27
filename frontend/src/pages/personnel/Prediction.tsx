@@ -3,9 +3,10 @@ import { BrainCircuit, RefreshCw, SlidersHorizontal } from 'lucide-react'
 import * as api from '../../services'
 import { useAsync } from '../../hooks/useAsync'
 import AIProcessing from '../../components/AIProcessing'
+import PredictionButton from '../../components/PredictionButton'
 import SupportPlanCard from '../../components/SupportPlanCard'
 import {
-  Button, Card, DisclaimerNote, Empty, ErrorNote, Field, Input, PageHeader, Spinner,
+  Card, DisclaimerNote, Empty, ErrorNote, Field, Input, PageHeader, Spinner,
 } from '../../components/ui'
 import { FactorBar, GaugeRing } from '../../components/cards'
 
@@ -25,14 +26,16 @@ export default function Prediction() {
   const latest = useAsync(() => api.fetchLatestPrediction(), true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [values, setValues] = useState<Record<string, number>>(
-    () => Object.fromEntries(FIELDS.map((f) => [f.key, f.def])))
+  const [values, setValues] = useState<Record<string, string>>(
+    () => Object.fromEntries(FIELDS.map((f) => [f.key, String(f.def)])))
   const [result, setResult] = useState<null | Awaited<ReturnType<typeof api.runPrediction>>>(null)
 
   const run = async () => {
     setBusy(true); setError(null)
     try {
-      setResult(await api.runPrediction(values))
+      const payload = Object.fromEntries(
+        FIELDS.map((f) => [f.key, Number(values[f.key] ?? 0)]))
+      setResult(await api.runPrediction(payload))
       await latest.reload()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Prediction failed.')
@@ -60,13 +63,12 @@ export default function Prediction() {
           <div className="space-y-3">
             {FIELDS.map((f) => (
               <Field key={f.key} label={f.label}>
-                <Input type="number" step="0.1" value={values[f.key]}
-                       onChange={(e) => setValues((v) => ({ ...v, [f.key]: Number(e.target.value) }))} />
+                <Input type="number" step="any" inputMode="decimal"
+                       value={values[f.key]}
+                       onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
               </Field>
             ))}
-            <Button className="w-full" loading={busy} onClick={run}>
-              <BrainCircuit size={15} /> Run prediction
-            </Button>
+            <PredictionButton loading={busy} onClick={run} />
             {error && <ErrorNote message={error} />}
           </div>
         </Card>
