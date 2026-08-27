@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity, BarChart3, Bell, BrainCircuit, CalendarCheck, ChevronDown, ClipboardList,
   FileBarChart2, HeartPulse, LayoutDashboard, LogOut, Menu, Radar, Settings,
-  ShieldAlert, ShieldCheck, Sparkles, UserCog, Users, X,
+  ShieldAlert, ShieldCheck, Sparkles, User, UserCog, Users, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -13,7 +13,7 @@ import AuroraBackground from '../visuals/AuroraBackground'
 import * as api from '../../services'
 import type { NotificationT } from '../../types'
 import { FOOTER_NOTE } from '../../types'
-import { fmtDateTime, initials } from '../../utils/format'
+import { fmtDateTime } from '../../utils/format'
 
 interface NavItem { to: string; label: string; icon: LucideIcon; end?: boolean; roles?: string[] }
 
@@ -245,8 +245,8 @@ useEffect(loadNotifs, [])
                 aria-expanded={accountOpen}
                 className="flex items-center gap-2.5 rounded-xl bg-subtle py-1.5 pl-1.5 pr-2.5 ring-1 ring-linestrong transition-colors hover:bg-hoverc hover:ring-sky-500/40"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-[11px] font-bold text-white">
-                  {user ? initials(user.full_name) : '?'}
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-white">
+                  <User size={15} />
                 </span>
                 <span className="hidden sm:block leading-tight text-left">
                   <span className="block text-xs font-semibold text-slate-100">{user?.full_name}</span>
@@ -268,8 +268,8 @@ useEffect(loadNotifs, [])
                 >
                   <div className="border-b border-line px-4 py-3.5">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-sm font-bold text-white">
-                        {user ? initials(user.full_name) : '?'}
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white">
+                        <User size={20} />
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-100">{user?.full_name}</p>
