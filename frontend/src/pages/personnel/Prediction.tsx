@@ -5,6 +5,7 @@ import { useAsync } from '../../hooks/useAsync'
 import AIProcessing from '../../components/AIProcessing'
 import PredictionButton from '../../components/PredictionButton'
 import SupportPlanCard from '../../components/SupportPlanCard'
+import WorkloadChangeSlider from '../../components/WorkloadChangeSlider'
 import {
   Card, DisclaimerNote, Empty, ErrorNote, Field, Input, PageHeader, Spinner,
 } from '../../components/ui'
@@ -63,9 +64,18 @@ export default function Prediction() {
           <div className="space-y-3">
             {FIELDS.map((f) => (
               <Field key={f.key} label={f.label}>
-                <Input type="number" step="any" inputMode="decimal"
-                       value={values[f.key]}
-                       onChange={(e) => setValues((v) => ({ ...v, [f.key]: e.target.value }))} />
+                {f.key === 'recent_workload_change'
+                  ? (
+                      <WorkloadChangeSlider
+                        value={values[f.key]}
+                        onChange={(v) => setValues((prev) => ({ ...prev, [f.key]: v }))}
+                      />
+                    )
+                  : (
+                      <Input type="number" step="any" inputMode="decimal"
+                             value={values[f.key]}
+                             onChange={(e) => setValues((prev) => ({ ...prev, [f.key]: e.target.value }))} />
+                    )}
               </Field>
             ))}
             <PredictionButton loading={busy} onClick={run} />
