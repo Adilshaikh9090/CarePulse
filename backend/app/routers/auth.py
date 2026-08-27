@@ -117,6 +117,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
         joining_date=datetime.utcnow().date(),
         email=payload.email.strip().lower(),
         phone=(payload.phone or "").strip(),
+        gender=payload.gender,
     )
     db.add(new_user)
     db.flush()

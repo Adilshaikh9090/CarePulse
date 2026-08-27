@@ -4,16 +4,33 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   Activity, BarChart3, Bell, BrainCircuit, CalendarCheck, ChevronDown, ClipboardList,
   FileBarChart2, HeartPulse, LayoutDashboard, LogOut, Menu, Radar, Settings,
-  ShieldAlert, ShieldCheck, Sparkles, User, UserCog, Users, X,
+  ShieldAlert, ShieldCheck, Sparkles, User as UserIcon, UserCog, Users, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { ThemeToggle } from '../ThemeToggle'
 import AuroraBackground from '../visuals/AuroraBackground'
 import * as api from '../../services'
-import type { NotificationT } from '../../types'
+import type { NotificationT, User } from '../../types'
 import { FOOTER_NOTE } from '../../types'
 import { fmtDateTime } from '../../utils/format'
+
+const genderAvatar = (g?: string | null) =>
+  g === 'male' ? '/avatar-male.svg' : g === 'female' ? '/avatar-female.svg' : null
+
+function AvatarImg({ user, size }: { user: User | null; size: number }) {
+  const src = user ? genderAvatar(user.gender) : null
+  const cls = `flex items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-white`
+  const square = { width: size, height: size }
+  return src ? (
+    <img src={src} alt="" width={size} height={size}
+         className="h-auto w-auto rounded-lg object-cover" style={square} />
+  ) : (
+    <span style={square} className={cls}>
+      <UserIcon size={Math.round(size * 0.55)} />
+    </span>
+  )
+}
 
 interface NavItem { to: string; label: string; icon: LucideIcon; end?: boolean; roles?: string[] }
 
@@ -245,9 +262,7 @@ useEffect(loadNotifs, [])
                 aria-expanded={accountOpen}
                 className="flex items-center gap-2.5 rounded-xl bg-subtle py-1.5 pl-1.5 pr-2.5 ring-1 ring-linestrong transition-colors hover:bg-hoverc hover:ring-sky-500/40"
               >
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-violet-500 text-white">
-                  <User size={15} />
-                </span>
+                <AvatarImg user={user} size={28} />
                 <span className="hidden sm:block leading-tight text-left">
                   <span className="block text-xs font-semibold text-slate-100">{user?.full_name}</span>
                   <span className="block text-[10px] uppercase tracking-wide text-slate-500">
@@ -268,9 +283,7 @@ useEffect(loadNotifs, [])
                 >
                   <div className="border-b border-line px-4 py-3.5">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-violet-500 text-white">
-                        <User size={20} />
-                      </span>
+                      <AvatarImg user={user} size={40} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-slate-100">{user?.full_name}</p>
                         <p className="truncate text-xs text-slate-400">{user?.email}</p>

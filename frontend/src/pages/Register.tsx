@@ -14,18 +14,19 @@ type Values = {
   full_name: string
   email: string
   phone: string
+  gender: 'male' | 'female' | ''
   password: string
   confirm: string
 }
 
 const EMPTY: Values = {
-  full_name: '', email: '', phone: '',
+  full_name: '', email: '', phone: '', gender: '',
   password: '', confirm: '',
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const FIELDS: (keyof Values)[] =
-  ['full_name', 'email', 'phone', 'password', 'confirm']
+  ['full_name', 'email', 'phone', 'gender', 'password', 'confirm']
 
 function validate(field: keyof Values, v: Values): string | undefined {
   switch (field) {
@@ -43,6 +44,9 @@ function validate(field: keyof Values, v: Values): string | undefined {
       if (digits.length > 0 && digits.length < 7) return 'Enter a valid phone number'
       return undefined
     }
+    case 'gender':
+      if (!v.gender) return 'Please select a profile image (male or female)'
+      return undefined
     case 'password':
       if (v.password.length < 8) return 'Password must be at least 8 characters'
       return undefined
@@ -76,6 +80,7 @@ export default function Register() {
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [createdPassword, setCreatedPassword] = useState('')
   const [createdEmail, setCreatedEmail] = useState('')
+  const [createdGender, setCreatedGender] = useState<'male' | 'female'>('male')
   const [copied, setCopied] = useState(false)
 
   const errorFor = (field: keyof Values): string | undefined =>
@@ -113,11 +118,13 @@ export default function Register() {
         full_name: values.full_name.trim(),
         email: values.email.trim(),
         phone: values.phone.trim() || undefined,
+        gender: values.gender || null,
         password: values.password,
       })
       setCreatedId(data.user.personnel_id)
       setCreatedPassword(values.password)
       setCreatedEmail(values.email.trim())
+      setCreatedGender(values.gender === 'female' ? 'female' : 'male')
       setValues(EMPTY)
       setTouched({})
       setSubmitted(false)
@@ -176,6 +183,15 @@ export default function Register() {
               />
             </svg>
           </div>
+
+          <motion.img
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4, type: 'spring', stiffness: 240, damping: 18 }}
+            src={createdGender === 'male' ? '/avatar-male.svg' : '/avatar-female.svg'}
+            alt="Your profile avatar"
+            className="mt-5 mx-auto h-20 w-20 rounded-2xl object-cover shadow-lg shadow-sky-500/20"
+          />
 
           <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
                      className="mt-4 text-xl font-bold tracking-tight text-slate-50">
@@ -274,6 +290,40 @@ export default function Register() {
                            onChange={setField('phone')} onBlur={blurField('phone')}
                            placeholder="+91 ..." autoComplete="tel" icon={Phone}
                            error={errorFor('phone')} />
+              </motion.div>
+              <motion.div variants={item} className="sm:col-span-2">
+                <span className="mb-1.5 block text-xs font-medium text-slate-300">Profile avatar</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {(['male', 'female'] as const).map((g) => {
+                    const selected = values.gender === g
+                    return (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => setField('gender')(g)}
+                        onBlur={blurField('gender')}
+                        aria-pressed={selected}
+                        className={`flex flex-col items-center gap-2 rounded-2xl px-4 py-3.5 ring-1 transition-all duration-200 ${
+                          selected
+                            ? 'bg-sky-500/15 ring-2 ring-sky-400'
+                            : 'bg-navy-700/60 ring-line hover:bg-hoverc'
+                        }`}
+                      >
+                        <img
+                          src={g === 'male' ? '/avatar-male.svg' : '/avatar-female.svg'}
+                          alt={g === 'male' ? 'Male' : 'Female'}
+                          className={`h-14 w-14 rounded-xl object-cover transition-transform duration-200 ${selected ? 'scale-105' : ''}`}
+                        />
+                        <span className={`text-sm font-semibold ${selected ? 'text-sky-200' : 'text-slate-300'}`}>
+                          {g === 'male' ? 'Male' : 'Female'}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {errorFor('gender') && (
+                  <span className="mt-1 block text-[11px] text-rose-300">{errorFor('gender')}</span>
+                )}
               </motion.div>
               <motion.div variants={item}>
                 <PasswordField label="Password" value={values.password} onChange={setField('password')}

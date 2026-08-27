@@ -28,6 +28,7 @@ class RegisterRequest(BaseModel):
     phone: str | None = Field(default=None, max_length=30)
     designation: str | None = Field(default=None, max_length=80)
     unit_id: int | None = None
+    gender: Literal["male", "female"] | None = None
     password: str = Field(min_length=8, max_length=128)
 
     @field_validator("full_name")
@@ -57,6 +58,7 @@ class UserOut(BaseModel):
     joining_date: date
     email: str
     phone: str
+    gender: str | None = None
 
     model_config = {"from_attributes": True}
 

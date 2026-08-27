@@ -10,6 +10,7 @@ export interface User {
   joining_date: string
   email: string
   phone: string
+  gender?: 'male' | 'female' | null
   twofa_enabled?: boolean
 }
 

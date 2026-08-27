@@ -30,6 +30,7 @@ export interface RegisterPayload {
   phone?: string
   designation?: string
   unit_id?: number | null
+  gender?: 'male' | 'female' | null
   password: string
 }
 export const register = (payload: RegisterPayload) =>

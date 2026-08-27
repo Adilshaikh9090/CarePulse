@@ -25,6 +25,7 @@ def _migrate_sqlite() -> None:
             "twofa_enabled": "BOOLEAN DEFAULT 0",
             "reset_token": "VARCHAR(80)",
             "reset_token_expires": "DATETIME",
+            "gender": "VARCHAR(10)",
         },
         "wellbeing_assessments": {
             "energy_level": "INTEGER",
@@ -55,6 +56,15 @@ def _migrate_sqlite() -> None:
             for name, ddl in cols.items():
                 if name not in present:
                     conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+
+    # backfill gender for existing personnel so avatars render (male/female)
+    with engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE users SET gender='female' WHERE gender IS NULL AND id % 2 = 0"
+        ))
+        conn.execute(text(
+            "UPDATE users SET gender='male' WHERE gender IS NULL"
+        ))
 
 
 @asynccontextmanager

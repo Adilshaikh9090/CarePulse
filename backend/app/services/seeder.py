@@ -44,7 +44,8 @@ def seed(force: bool = False) -> bool:
             return User(personnel_id=pid, password_hash=pw_hash, salt=salt, full_name=name,
                         role=role, unit=unit, designation=designation, joining_date=joined,
                         email=f"{pid.lower()}@demo.example",
-                        phone=f"+91 9000{random.randint(100000, 999999)}")
+                        phone=f"+91 9000{random.randint(100000, 999999)}",
+                        gender=random.choice(["male", "female"]))
 
         admin = mk("ADMIN-01", "Vikram Desai", "administrator", units[0], "System Administrator", date(2016, 3, 14))
         db.add(admin)

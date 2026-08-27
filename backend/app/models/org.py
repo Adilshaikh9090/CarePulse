@@ -34,6 +34,7 @@ class User(Base):
     joining_date: Mapped[date] = mapped_column(Date, default=date(2019, 6, 1))
     email: Mapped[str] = mapped_column(String(160), default="")
     phone: Mapped[str] = mapped_column(String(30), default="")
+    gender: Mapped[str | None] = mapped_column(String(10), nullable=True)  # male|female
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     twofa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     reset_token: Mapped[str | None] = mapped_column(String(80), nullable=True)
